@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { BookingForm } from '../components/BookingForm';
+import { Announcements, RouteCard } from '../components/TripInfo';
 import { BusMap, OccupancySummary } from '../components/BusOccupancy';
 import { LookupBooking, PublicPassengerList, SuccessModal } from '../components/PublicParts';
 import { Card, ErrorBox, Spinner, cx, useToast } from '../components/ui';
@@ -122,6 +123,7 @@ function TripView({ trip, onTripChanged }: { trip: Trip; onTripChanged: () => vo
   return (
     <div className="flex flex-col gap-5">
       {error && <ErrorBox message={error} onRetry={() => void refresh()} />}
+      <Announcements trip={trip} />
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <Card className="order-2 p-5 sm:p-7 lg:order-1">
           <h2 className="text-xl font-extrabold">احجز مقعدك</h2>
@@ -170,6 +172,8 @@ function TripView({ trip, onTripChanged }: { trip: Trip; onTripChanged: () => vo
           )}
         </Card>
       </div>
+
+      <RouteCard trip={trip} />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Card className="p-5 sm:p-7">

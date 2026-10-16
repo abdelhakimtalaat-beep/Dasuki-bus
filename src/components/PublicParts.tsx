@@ -5,6 +5,7 @@ import { formatDateTime, formatMoney, formatTime, formatTripDate, seatsWord, STA
 import type { BookingLookup, BookingResult, PublicBooking, Trip } from '../lib/types';
 import { Badge, Button, EmptyState, Input, Modal, Select, cx } from './ui';
 import { InstaPayBox } from './Payment';
+import { Announcements } from './TripInfo';
 
 // ------------------------------------------------------------------ نجاح الحجز
 export function SuccessModal({
@@ -58,6 +59,7 @@ export function SuccessModal({
           bookingCode={result.booking_code}
           compact
         />
+        <Announcements trip={trip} compact />
         <p className="text-sm text-muted">
           صوّر هذه الشاشة أو انسخ رقم الحجز. لتعديل الحجز أو إلغائه تواصل مع مسؤول الرحلة واذكر رقم الحجز.
         </p>

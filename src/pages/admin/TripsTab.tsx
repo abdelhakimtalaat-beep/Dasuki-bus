@@ -13,6 +13,7 @@ import {
 } from '../../lib/format';
 import type { PickupPoint, Trip, TripInput, TripStatus } from '../../lib/types';
 import { isValidEgyptianPhone, normalizePhone, toLatinDigits } from '../../lib/validation';
+import { safeGoogleEmbed, safeHttps } from '../../components/TripInfo';
 import { TripStatusBadge } from '../../components/Layout';
 import { Button, Card, EmptyState, Field, Input, Modal, Select, Textarea, cx, useToast } from '../../components/ui';
 
@@ -32,6 +33,10 @@ interface Draft {
   closes: string;
   status: TripStatus;
   notes: string;
+  announcements: string;
+  route_stops: string;
+  route_map_url: string;
+  route_embed_url: string;
   pointIds: string[];
 }
 
@@ -55,6 +60,10 @@ function draftFromTrip(t: Trip, pointIds: string[]): Draft {
     closes: isoToCairoLocalInput(t.booking_closes_at),
     status: t.status === 'full' ? 'open' : t.status,
     notes: t.notes ?? '',
+    announcements: t.announcements ?? '',
+    route_stops: t.route_stops ?? '',
+    route_map_url: t.route_map_url ?? '',
+    route_embed_url: t.route_embed_url ?? '',
     pointIds,
   };
 }
@@ -77,6 +86,10 @@ function draftForNextWeek(latest: Trip | undefined, latestPoints: string[], acti
     closes: `${addDays(safeDate, -1)}T22:00`,
     status: 'open',
     notes: '',
+    announcements: latest?.announcements ?? '',
+    route_stops: latest?.route_stops ?? '',
+    route_map_url: latest?.route_map_url ?? '',
+    route_embed_url: latest?.route_embed_url ?? '',
     pointIds: (latestPoints.length ? latestPoints : activePoints.map((p) => p.id)).filter((id) =>
       activePoints.some((p) => p.id === id),
     ),
@@ -253,6 +266,9 @@ function TripEditor({
     if (!(maxPer >= 1 && maxPer <= 50)) return setErr('الحد الأقصى للحجز الواحد بين 1 و 50.');
     if (!d.opens || !d.closes || d.closes <= d.opens) return setErr('موعد إغلاق الحجز يجب أن يكون بعد موعد فتحه.');
     if (!d.pointIds.length) return setErr('اختر نقطة تجمع واحدة على الأقل.');
+    if (d.route_map_url.trim() && !safeHttps(d.route_map_url.trim())) return setErr('رابط خرائط جوجل يجب أن يبدأ بـ https://');
+    if (d.route_embed_url.trim() && !safeGoogleEmbed(d.route_embed_url.trim()))
+      return setErr('رابط الخريطة المضمّنة يجب أن يكون من google.com/maps.');
     const data: TripInput = {
       title: d.title.trim() || 'رحلة سيدي إبراهيم الدسوقي',
       trip_date: d.trip_date,
@@ -267,6 +283,10 @@ function TripEditor({
       booking_closes_at: cairoLocalInputToIso(d.closes),
       status: d.status,
       notes: d.notes.trim() || null,
+      announcements: d.announcements.trim() || null,
+      route_stops: d.route_stops.trim() || null,
+      route_map_url: d.route_map_url.trim() || null,
+      route_embed_url: d.route_embed_url.trim() || null,
     };
     setBusy(true);
     setErr(null);
@@ -356,6 +376,18 @@ function TripEditor({
             })}
           </div>
         </fieldset>
+        <Field label="تنبيهات مهمة" optional htmlFor="te-ann" hint="سطر لكل تنبيه. تظهر في أعلى صفحة الحجز وفي رسالة تأكيد الحجز.">
+          <Textarea id="te-ann" rows={4} value={d.announcements} onChange={(e) => set('announcements', e.target.value)} maxLength={2000} />
+        </Field>
+        <Field label="مسار الرحلة" optional htmlFor="te-route" hint="سطر لكل محطة بالترتيب.">
+          <Textarea id="te-route" rows={6} value={d.route_stops} onChange={(e) => set('route_stops', e.target.value)} maxLength={2000} />
+        </Field>
+        <Field label="رابط المسار في خرائط جوجل" optional htmlFor="te-map" hint="الرابط الذي يفتحه الراكب في تطبيق الخرائط (مثل maps.app.goo.gl/…)">
+          <Input id="te-map" dir="ltr" className="text-right" value={d.route_map_url} onChange={(e) => set('route_map_url', e.target.value)} placeholder="https://maps.app.goo.gl/..." />
+        </Field>
+        <Field label="رابط الخريطة المعروضة داخل الصفحة" optional htmlFor="te-embed" hint="اتركه فارغًا لإخفاء الخريطة والإبقاء على زر الفتح فقط.">
+          <Input id="te-embed" dir="ltr" className="text-right" value={d.route_embed_url} onChange={(e) => set('route_embed_url', e.target.value)} placeholder="https://maps.google.com/maps?...&output=embed" />
+        </Field>
         <Field label="ملاحظات للركاب" optional htmlFor="te-notes">
           <Textarea id="te-notes" value={d.notes} onChange={(e) => set('notes', e.target.value)} maxLength={500} />
         </Field>

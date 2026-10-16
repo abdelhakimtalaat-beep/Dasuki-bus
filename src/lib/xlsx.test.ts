@@ -32,6 +32,10 @@ const trip: Trip = {
   booking_closes_at: '2026-10-15T20:00:00Z',
   status: 'open',
   notes: null,
+  announcements: null,
+  route_stops: null,
+  route_map_url: null,
+  route_embed_url: null,
   created_at: '2026-10-10T00:00:00Z',
   updated_at: '2026-10-10T00:00:00Z',
 };

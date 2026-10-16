@@ -321,6 +321,40 @@ select t.expect_error($q$select public.admin_save_trip(null, jsonb_build_object(
     array['11111111-0000-0000-0000-000000000001']::uuid[])$q$, 'instapay_number_check', 'رقم إنستاباي غير صالح مرفوض');
 
 -- =====================================================================
+-- 13ب) التنبيهات ومسار الرحلة والخريطة
+-- =====================================================================
+select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
+create temp table rt as select public.admin_save_trip(null, jsonb_build_object(
+    'trip_date', '2026-10-28', 'departure_time', '07:30', 'departure_point', 'الشروق',
+    'announcements', E'الحجز للرجال فقط.\nمسؤول الباص: محمد عبد الله ربيع.',
+    'route_stops', E'الشروق\nالطريق الإقليمي\nسيدي إبراهيم الدسوقي',
+    'route_map_url', 'https://maps.app.goo.gl/Z9rYgAv3Hp94hX7t5',
+    'route_embed_url', 'https://maps.google.com/maps?saddr=30.13,31.60&daddr=31.12,30.64&output=embed',
+    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', '2026-10-25 23:59+03'),
+    array['11111111-0000-0000-0000-000000000001']::uuid[]) as id;
+grant select on rt to public;
+select t.ok((select route_stops like 'الشروق%' and announcements like 'الحجز للرجال فقط.%'
+               and route_map_url like 'https://maps.app.goo.gl/%' and route_embed_url like '%output=embed'
+             from public.trips where id = (select id from rt)), 'التنبيهات والمسار والخريطة تُحفظ مع الرحلة');
+select public.admin_save_trip((select id from rt), jsonb_build_object(
+    'trip_date', '2026-10-28', 'departure_time', '07:30', 'departure_point', 'الشروق',
+    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', '2026-10-25 23:59+03'),
+    array['11111111-0000-0000-0000-000000000001']::uuid[]);
+select t.ok((select route_stops is not null from public.trips where id = (select id from rt)), 'تعديل الرحلة بدون الحقول لا يمسح المسار');
+select t.expect_error($q$select public.admin_save_trip((select id from rt), jsonb_build_object(
+    'trip_date', '2026-10-28', 'departure_time', '07:30', 'departure_point', 'الشروق',
+    'route_embed_url', 'https://evil.example.com/maps',
+    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', '2026-10-25 23:59+03'),
+    array['11111111-0000-0000-0000-000000000001']::uuid[])$q$, 'route_embed_url_check', 'رابط خريطة مضمّنة من غير جوجل مرفوض');
+select t.expect_error($q$select public.admin_save_trip((select id from rt), jsonb_build_object(
+    'trip_date', '2026-10-28', 'departure_time', '07:30', 'departure_point', 'الشروق',
+    'route_map_url', 'javascript:alert(1)',
+    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', '2026-10-25 23:59+03'),
+    array['11111111-0000-0000-0000-000000000001']::uuid[])$q$, 'route_map_url_check', 'رابط خريطة غير آمن مرفوض');
+select t.as_anon();
+select t.ok((select route_stops is not null from public.trips where id = (select id from rt)), 'الزائر يرى المسار والتنبيهات');
+
+-- =====================================================================
 -- 14) الثبات النهائي: المقاعد المخزنة = مجموع الحجوزات المؤكدة لكل رحلة
 -- =====================================================================
 reset role;

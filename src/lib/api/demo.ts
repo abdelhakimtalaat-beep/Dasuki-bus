@@ -30,7 +30,7 @@ interface Db {
   session: AdminSession | null;
 }
 
-const KEY = 'dasuki-bus-demo-v2';
+const KEY = 'dasuki-bus-demo-v3';
 export const DEMO_CREDENTIALS = { email: 'admin@demo.local', password: 'demo1234' };
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -47,10 +47,8 @@ function seed(): Db {
   const now = Date.now();
   const iso = (offsetHours: number) => new Date(now + offsetHours * 3600_000).toISOString();
   const points: PickupPoint[] = [
-    { id: 'p1', name: 'مفارق الـ100 بالشروق', description: null, is_active: true, sort_order: 1 },
-    { id: 'p2', name: 'صينية النهضة بالشروق', description: null, is_active: true, sort_order: 2 },
-    { id: 'p3', name: 'المستقبل', description: null, is_active: true, sort_order: 3 },
-    { id: 'p4', name: 'كارفور العبور', description: null, is_active: true, sort_order: 4 },
+    { id: 'p1', name: 'المستقبل', description: null, is_active: true, sort_order: 1 },
+    { id: 'p2', name: 'الشروق', description: null, is_active: true, sort_order: 2 },
   ];
   // رحلة واحدة: الأربعاء 28 أكتوبر 2026 — يغلق الحجز 25 أكتوبر 11:59 م بتوقيت القاهرة
   const trips: Trip[] = [
@@ -58,8 +56,8 @@ function seed(): Db {
       id: 't-1028',
       title: 'رحلة سيدي إبراهيم الدسوقي',
       trip_date: '2026-10-28',
-      departure_time: '06:00',
-      departure_point: 'مفارق الـ100 بالشروق',
+      departure_time: '07:30',
+      departure_point: 'الشروق',
       destination: 'مسجد سيدي إبراهيم الدسوقي – دسوق، كفر الشيخ',
       capacity: 50,
       max_seats_per_booking: 10,
@@ -70,6 +68,13 @@ function seed(): Db {
       booking_closes_at: cairoLocalInputToIso('2026-10-25T23:59'),
       status: 'open',
       notes: null,
+      announcements:
+        'الحجز للرجال فقط.\nالتجمع في تمام الساعة 7:00 صباحًا، والانطلاق من نقطة تجمع الشروق الساعة 7:30 صباحًا.\nمسؤول الباص: محمد عبد الله ربيع.',
+      route_stops:
+        'الشروق\nالطريق الإقليمي\nسيدي أحمد البدوي\nسيدي عبد العزيز المكنى بأبي المجد\nسيدي إبراهيم الدسوقي\nدار الدسوقية المحمدية بالرحمانية',
+      route_map_url: 'https://maps.app.goo.gl/Z9rYgAv3Hp94hX7t5',
+      route_embed_url:
+        'https://maps.google.com/maps?saddr=30.1302695,31.602518&daddr=30.1669614,31.6537869+to:30.7827791,30.9983505+to:31.1284091,30.6465936+to:31.10664,30.630273&output=embed',
       created_at: iso(-60),
       updated_at: iso(-1),
     },
@@ -79,13 +84,13 @@ function seed(): Db {
   const names = [
     ['محمد عبد الرحمن', 3, 'p1', '01001234567', '', true],
     ['أحمد السيد', 2, 'p2', '01112345678', 'معي كرسي متحرك قابل للطي', true],
-    ['فاطمة إبراهيم', 4, 'p3', '', '', false],
-    ['محمود فتحي', 1, 'p4', '01223456789', '', true],
+    ['فاطمة إبراهيم', 4, 'p1', '', '', false],
+    ['محمود فتحي', 1, 'p2', '01223456789', '', true],
     ['حسن علي', 5, 'p1', '01556789012', 'عائلة', false],
     ['سعاد محمد', 2, 'p2', '', '', true],
-    ['عبد الله مصطفى', 3, 'p3', '01098765432', '', false],
+    ['عبد الله مصطفى', 3, 'p1', '01098765432', '', false],
     ['خالد يوسف', 6, 'p1', '', 'مجموعة من المسجد', false],
-    ['منى حسين', 2, 'p4', '01187654321', '', true],
+    ['منى حسين', 2, 'p2', '01187654321', '', true],
     ['إبراهيم الدسوقي', 3, 'p2', '', '', false],
   ] as const;
   const bookings: DbBooking[] = names.map(([n, s, p, ph, no, paid], i) => ({

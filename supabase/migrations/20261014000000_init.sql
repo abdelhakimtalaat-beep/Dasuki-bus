@@ -77,6 +77,12 @@ create table public.trips (
   booking_closes_at     timestamptz not null,
   status                public.trip_status not null default 'open',
   notes                 text check (notes is null or char_length(notes) <= 500),
+  -- تنبيهات ومسار الرحلة (سطر لكل بند) وروابط الخريطة
+  announcements         text check (announcements is null or char_length(announcements) <= 2000),
+  route_stops           text check (route_stops is null or char_length(route_stops) <= 2000),
+  route_map_url         text check (route_map_url is null or route_map_url ~ '^https://[^\s"<>]+$'),
+  route_embed_url       text check (route_embed_url is null
+                                    or route_embed_url ~ '^https://(www\.|maps\.)?google\.com/maps[^\s"<>]*$'),
   created_by            uuid default auth.uid(),
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now(),
@@ -638,7 +644,8 @@ begin
   if p_id is null then
     insert into public.trips (title, trip_date, departure_time, departure_point, destination,
                               capacity, max_seats_per_booking, booking_opens_at, booking_closes_at,
-                              status, notes, seat_price, instapay_number)
+                              status, notes, seat_price, instapay_number,
+                              announcements, route_stops, route_map_url, route_embed_url)
     values (coalesce(nullif(p_data->>'title', ''), 'رحلة سيدي إبراهيم الدسوقي'),
             (p_data->>'trip_date')::date,
             (p_data->>'departure_time')::time,
@@ -651,7 +658,11 @@ begin
             coalesce(nullif(p_data->>'status', ''), 'open')::public.trip_status,
             p_data->>'notes',
             coalesce((p_data->>'seat_price')::numeric, 300),
-            nullif(public.normalize_phone(p_data->>'instapay_number'), ''))
+            nullif(public.normalize_phone(p_data->>'instapay_number'), ''),
+            nullif(btrim(p_data->>'announcements'), ''),
+            nullif(btrim(p_data->>'route_stops'), ''),
+            nullif(btrim(p_data->>'route_map_url'), ''),
+            nullif(btrim(p_data->>'route_embed_url'), ''))
     returning id into v_id;
   else
     update public.trips set
@@ -669,7 +680,15 @@ begin
       seat_price            = coalesce((p_data->>'seat_price')::numeric, seat_price),
       instapay_number       = case when p_data ? 'instapay_number'
                                    then nullif(public.normalize_phone(p_data->>'instapay_number'), '')
-                                   else instapay_number end
+                                   else instapay_number end,
+      announcements         = case when p_data ? 'announcements'
+                                   then nullif(btrim(p_data->>'announcements'), '') else announcements end,
+      route_stops           = case when p_data ? 'route_stops'
+                                   then nullif(btrim(p_data->>'route_stops'), '') else route_stops end,
+      route_map_url         = case when p_data ? 'route_map_url'
+                                   then nullif(btrim(p_data->>'route_map_url'), '') else route_map_url end,
+      route_embed_url       = case when p_data ? 'route_embed_url'
+                                   then nullif(btrim(p_data->>'route_embed_url'), '') else route_embed_url end
     where id = p_id
     returning id into v_id;
     if v_id is null then

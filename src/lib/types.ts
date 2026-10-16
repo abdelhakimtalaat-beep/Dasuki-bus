@@ -17,6 +17,10 @@ export interface Trip {
   booking_closes_at: string; // ISO
   status: TripStatus;
   notes: string | null;
+  announcements: string | null;
+  route_stops: string | null;
+  route_map_url: string | null;
+  route_embed_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -130,6 +134,10 @@ export interface TripInput {
   booking_closes_at: string; // ISO
   status: TripStatus;
   notes: string | null;
+  announcements: string | null;
+  route_stops: string | null;
+  route_map_url: string | null;
+  route_embed_url: string | null;
 }
 
 export interface BookingPatch {
