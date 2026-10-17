@@ -31,7 +31,7 @@ interface Db {
   session: AdminSession | null;
 }
 
-const KEY = 'dasuki-bus-demo-v4';
+const KEY = 'dasuki-bus-demo-v6';
 export const DEMO_CREDENTIALS = { email: 'admin@demo.local', password: 'demo1234' };
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -50,6 +50,7 @@ function seed(): Db {
   const points: PickupPoint[] = [
     { id: 'p1', name: 'المستقبل', description: null, is_active: true, sort_order: 1 },
     { id: 'p2', name: 'الشروق', description: null, is_active: true, sort_order: 2 },
+    { id: 'p3', name: 'العبور', description: null, is_active: true, sort_order: 3 },
   ];
   // رحلة واحدة: الأربعاء 28 أكتوبر 2026 — يغلق الحجز 25 أكتوبر 11:59 م بتوقيت القاهرة
   const trips: Trip[] = [
@@ -72,10 +73,10 @@ function seed(): Db {
       announcements:
         'الحجز للرجال فقط.\nالتجمع في تمام الساعة 7:00 صباحًا، والانطلاق من نقطة تجمع الشروق الساعة 7:30 صباحًا.\nمسؤول الباص: محمد عبد الله ربيع.',
       route_stops:
-        'الشروق\nالطريق الإقليمي\nسيدي أحمد البدوي\nسيدي عبد العزيز المكنى بأبي المجد\nسيدي إبراهيم الدسوقي\nدار الدسوقية المحمدية بالرحمانية',
-      route_map_url: 'https://maps.app.goo.gl/Z9rYgAv3Hp94hX7t5',
+        'الشروق\nالمستقبل\nالعبور\nالطريق الإقليمي\nسيدي أحمد البدوي\nسيدي عبد العزيز المكنى بأبي المجد\nسيدي إبراهيم الدسوقي\nدار الدسوقية المحمدية بالرحمانية',
+      route_map_url: 'https://maps.app.goo.gl/FtST9r2wZgbz5My87',
       route_embed_url:
-        'https://maps.google.com/maps?saddr=30.1302695,31.602518&daddr=30.1669614,31.6537869+to:30.7827791,30.9983505+to:31.1284091,30.6465936+to:31.10664,30.630273&output=embed',
+        'https://maps.google.com/maps?saddr=30.1669614,31.6537869&daddr=30.1686687,31.5597833+to:30.1823984,31.5044224+to:30.2758702,31.5281187+to:30.7827791,30.9983505+to:31.1284091,30.6465936+to:31.10664,30.630273&output=embed',
       created_at: iso(-60),
       updated_at: iso(-1),
     },
