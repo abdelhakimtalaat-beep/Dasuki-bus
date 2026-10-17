@@ -85,7 +85,7 @@ select t.as_anon();
 select * from public.create_booking((select week1 from ids), 'أحمد محمد علي', 2,
   '11111111-0000-0000-0000-000000000001', '01012345678', 'معي طفل');
 select * from public.create_booking((select week1 from ids), 'محمود حسن', 1,
-  '11111111-0000-0000-0000-000000000002', null, null);
+  '11111111-0000-0000-0000-000000000002', '01022222222', null);
 select t.ok((public.get_trip_stats((select week1 from ids))->>'total_bookings')::int = 2, 'حجزان مسجلان يظهران في الإحصائيات');
 select t.ok((public.get_trip_stats((select week1 from ids))->>'booked_seats')::int = 3, 'إجمالي المقاعد = 3 (وليس عدد السجلات)');
 select t.ok((select count(*) from public.get_public_bookings((select week1 from ids))) = 2, 'القائمة العامة تعرض الحجزين');
@@ -134,23 +134,23 @@ do $$
 declare i int;
 begin
   for i in 1..4 loop
-    perform public.create_booking((select week1 from ids), 'راكب جماعي ' || i, 10, '11111111-0000-0000-0000-000000000003');
+    perform public.create_booking((select week1 from ids), 'راكب جماعي ' || i, 10, '11111111-0000-0000-0000-000000000003', '0100000000' || i);
   end loop;
-  perform public.create_booking((select week1 from ids), 'راكب أخير', 6, '11111111-0000-0000-0000-000000000003');
+  perform public.create_booking((select week1 from ids), 'راكب أخير', 6, '11111111-0000-0000-0000-000000000003', '01155550101');
 end $$;
 select t.ok((public.get_trip_stats((select week1 from ids))->>'remaining_seats')::int = 1, 'تبقى مقعد واحد (49 من 50)');
 
 select t.as_anon();
-select t.expect_error($q$select * from public.create_booking((select week1 from ids), 'زائر متأخر', 2, '11111111-0000-0000-0000-000000000001')$q$,
+select t.expect_error($q$select * from public.create_booking((select week1 from ids), 'زائر متأخر', 2, '11111111-0000-0000-0000-000000000001', '01155550102')$q$,
    'NOT_ENOUGH_SEATS', 'مقعد واحد متبقٍ: حجز مقعدين مرفوض');
-select * from public.create_booking((select week1 from ids), 'آخر راكب', 1, '11111111-0000-0000-0000-000000000001');
+select * from public.create_booking((select week1 from ids), 'آخر راكب', 1, '11111111-0000-0000-0000-000000000001', '01155550103');
 select t.ok((select status from public.trips where id = (select week1 from ids)) = 'full', 'حالة الرحلة تصبح "مكتملة" تلقائيًا عند 50');
-select t.expect_error($q$select * from public.create_booking((select week1 from ids), 'زائر جديد', 1, '11111111-0000-0000-0000-000000000001')$q$,
+select t.expect_error($q$select * from public.create_booking((select week1 from ids), 'زائر جديد', 1, '11111111-0000-0000-0000-000000000001', '01155550104')$q$,
    'BUS_FULL', 'الأتوبيس مكتمل: لا يُقبل أي حجز');
 
 -- المسؤول نفسه لا يستطيع تجاوز السعة
 select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
-select t.expect_error($q$select * from public.create_booking((select week1 from ids), 'محاولة مسؤول', 1, '11111111-0000-0000-0000-000000000001')$q$,
+select t.expect_error($q$select * from public.create_booking((select week1 from ids), 'محاولة مسؤول', 1, '11111111-0000-0000-0000-000000000001', '01155550105')$q$,
    'NOT_ENOUGH_SEATS', 'المسؤول أيضًا لا يتجاوز 50 مقعدًا');
 select t.expect_error($q$update public.bookings set seats = seats + 1 where full_name = 'آخر راكب'$q$,
    'NOT_ENOUGH_SEATS', 'تعديل عدد المقاعد لا يتجاوز السعة');
@@ -181,7 +181,7 @@ select t.ok((select cancelled_at is not null from public.bookings where full_nam
 select t.ok((public.get_trip_stats((select week1 from ids))->>'cancelled_bookings')::int = 2, 'الحجوزات الملغاة محفوظة كسجل');
 
 select t.as_anon();
-select * from public.create_booking((select week1 from ids), 'سيد عبد الله', 3, '11111111-0000-0000-0000-000000000002');
+select * from public.create_booking((select week1 from ids), 'سيد عبد الله', 3, '11111111-0000-0000-0000-000000000002', '01155550106');
 select t.ok((public.get_trip_stats((select week1 from ids))->>'booked_seats')::int = 50, 'المقاعد المحررة أصبحت متاحة للحجز مجددًا');
 
 select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
@@ -192,17 +192,17 @@ select t.expect_error($q$update public.bookings set status = 'confirmed' where f
 -- 6) فصل الأسابيع
 -- =====================================================================
 select t.as_anon();
-select * from public.create_booking((select week2 from ids), 'حجز الأسبوع الثاني', 4, '11111111-0000-0000-0000-000000000001');
+select * from public.create_booking((select week2 from ids), 'حجز الأسبوع الثاني', 4, '11111111-0000-0000-0000-000000000001', '01155550107');
 select t.ok((public.get_trip_stats((select week2 from ids))->>'booked_seats')::int = 4, 'حجوزات الأسبوع الثاني مستقلة');
 select t.ok((public.get_trip_stats((select week1 from ids))->>'booked_seats')::int = 50, 'حجوزات الأسبوع الأول لم تتأثر');
-select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'نقطة غير معتمدة', 1, '11111111-0000-0000-0000-000000000003')$q$,
+select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'نقطة غير معتمدة', 1, '11111111-0000-0000-0000-000000000003', '01155550108')$q$,
    'INVALID_PICKUP_POINT', 'لا يمكن اختيار نقطة غير معتمدة لهذه الرحلة');
 
 -- =====================================================================
 -- 7) منع التكرار (الضغط المتكرر)
 -- =====================================================================
-select * from public.create_booking((select week2 from ids), 'ضغط مزدوج', 2, '11111111-0000-0000-0000-000000000001', null, null, 'cccccccc-0000-0000-0000-000000000009');
-select t.ok((select already_existed from public.create_booking((select week2 from ids), 'ضغط مزدوج', 2, '11111111-0000-0000-0000-000000000001', null, null, 'cccccccc-0000-0000-0000-000000000009')),
+select * from public.create_booking((select week2 from ids), 'ضغط مزدوج', 2, '11111111-0000-0000-0000-000000000001', '01033333333', null, 'cccccccc-0000-0000-0000-000000000009');
+select t.ok((select already_existed from public.create_booking((select week2 from ids), 'ضغط مزدوج', 2, '11111111-0000-0000-0000-000000000001', '01033333333', null, 'cccccccc-0000-0000-0000-000000000009')),
    'نفس الطلب مرتين يُرجع الحجز الأول');
 select t.ok((public.get_trip_stats((select week2 from ids))->>'booked_seats')::int = 6, 'الضغط المتكرر لا ينشئ حجزًا مكررًا');
 
@@ -211,10 +211,10 @@ select t.ok((public.get_trip_stats((select week2 from ids))->>'booked_seats')::i
 -- =====================================================================
 select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'اسم', 1, '11111111-0000-0000-0000-000000000001', '0123')$q$, 'INVALID_PHONE', 'رقم هاتف غير صالح مرفوض');
 select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'اسم', 1, '11111111-0000-0000-0000-000000000001', '01312345678')$q$, 'INVALID_PHONE', 'بادئة غير مصرية (013) مرفوضة');
-select t.expect_error($q$select * from public.create_booking((select week2 from ids), ' ', 1, '11111111-0000-0000-0000-000000000001')$q$, 'INVALID_NAME', 'الاسم الفارغ مرفوض');
-select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'اسم كامل', 0, '11111111-0000-0000-0000-000000000001')$q$, 'INVALID_SEATS', 'صفر مقاعد مرفوض');
+select t.expect_error($q$select * from public.create_booking((select week2 from ids), ' ', 1, '11111111-0000-0000-0000-000000000001', '01155550109')$q$, 'INVALID_NAME', 'الاسم الفارغ مرفوض');
+select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'اسم كامل', 0, '11111111-0000-0000-0000-000000000001', '01155550110')$q$, 'INVALID_SEATS', 'صفر مقاعد مرفوض');
 select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'اسم كامل', 1, null)$q$, 'PICKUP_REQUIRED', 'نقطة التجمع إلزامية');
-select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'اسم كامل', 11, '11111111-0000-0000-0000-000000000001')$q$, 'MAX_SEATS_PER_BOOKING', 'الحد الأقصى للمقاعد في الحجز الواحد');
+select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'اسم كامل', 11, '11111111-0000-0000-0000-000000000001', '01155550111')$q$, 'MAX_SEATS_PER_BOOKING', 'الحد الأقصى للمقاعد في الحجز الواحد');
 select * from public.create_booking((select week2 from ids), 'هاتف بأرقام عربية', 1, '11111111-0000-0000-0000-000000000001', '+20 ١٠٠ ١٢٣ ٤٥٦٧');
 select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
 select t.ok((select phone from public.bookings where full_name = 'هاتف بأرقام عربية') = '01001234567', 'توحيد الرقم المصري (+20 وأرقام عربية)');
@@ -235,15 +235,15 @@ grant select on w to public;
 select public.admin_set_trip_status((select week2 from ids), 'closed');
 
 select t.as_anon();
-select t.expect_error($q$select * from public.create_booking((select future from w), 'مبكر', 1, '11111111-0000-0000-0000-000000000001')$q$, 'BOOKING_NOT_OPEN_YET', 'الحجز قبل موعد الفتح مرفوض');
-select t.expect_error($q$select * from public.create_booking((select past from w), 'متأخر', 1, '11111111-0000-0000-0000-000000000001')$q$, 'BOOKING_CLOSED', 'الحجز بعد موعد الإغلاق مرفوض');
-select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'بعد الإغلاق', 1, '11111111-0000-0000-0000-000000000001')$q$, 'BOOKING_CLOSED', 'الرحلة المغلقة يدويًا لا تقبل حجوزات');
+select t.expect_error($q$select * from public.create_booking((select future from w), 'مبكر', 1, '11111111-0000-0000-0000-000000000001', '01155550112')$q$, 'BOOKING_NOT_OPEN_YET', 'الحجز قبل موعد الفتح مرفوض');
+select t.expect_error($q$select * from public.create_booking((select past from w), 'متأخر', 1, '11111111-0000-0000-0000-000000000001', '01155550113')$q$, 'BOOKING_CLOSED', 'الحجز بعد موعد الإغلاق مرفوض');
+select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'بعد الإغلاق', 1, '11111111-0000-0000-0000-000000000001', '01155550114')$q$, 'BOOKING_CLOSED', 'الرحلة المغلقة يدويًا لا تقبل حجوزات');
 
 select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
-select * from public.create_booking((select past from w), 'إضافة من المسؤول', 1, '11111111-0000-0000-0000-000000000001');
+select * from public.create_booking((select past from w), 'إضافة من المسؤول', 1, '11111111-0000-0000-0000-000000000001', '01155550115');
 select t.ok(true, 'المسؤول يستطيع إضافة حجز خارج فترة الحجز');
 select public.admin_set_trip_status((select future from w), 'cancelled');
-select t.expect_error($q$select * from public.create_booking((select future from w), 'رحلة ملغاة', 1, '11111111-0000-0000-0000-000000000001')$q$, 'TRIP_CANCELLED', 'الرحلة الملغاة لا تقبل حجوزات حتى من المسؤول');
+select t.expect_error($q$select * from public.create_booking((select future from w), 'رحلة ملغاة', 1, '11111111-0000-0000-0000-000000000001', '01155550116')$q$, 'TRIP_CANCELLED', 'الرحلة الملغاة لا تقبل حجوزات حتى من المسؤول');
 
 -- =====================================================================
 -- 10) نقاط التجمع: الإيقاف لا يمحو السجل التاريخي
@@ -253,7 +253,7 @@ select t.ok((select count(*) from public.bookings b join public.pickup_points p 
 select t.expect_error($q$delete from public.pickup_points where name = 'مدينة نصر'$q$, 'permission denied', 'نقاط التجمع لا تُحذف (تُوقف فقط)');
 select public.admin_set_trip_status((select week2 from ids), 'open');
 select t.as_anon();
-select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'نقطة موقوفة', 1, '11111111-0000-0000-0000-000000000002')$q$, 'INVALID_PICKUP_POINT', 'الزائر لا يحجز على نقطة موقوفة');
+select t.expect_error($q$select * from public.create_booking((select week2 from ids), 'نقطة موقوفة', 1, '11111111-0000-0000-0000-000000000002', '01155550117')$q$, 'INVALID_PICKUP_POINT', 'الزائر لا يحجز على نقطة موقوفة');
 select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
 select t.expect_error($q$select public.admin_save_trip((select week1 from ids), jsonb_build_object(
     'trip_date', current_date + 2, 'departure_time', '06:00', 'departure_point', 'رمسيس',
@@ -305,7 +305,7 @@ select t.ok((select trip_id from public.bookings where booking_code = (select bo
 
 -- حجز جديد من المسؤول يبدأ غير مدفوع دائمًا
 select public.admin_set_trip_status((select week2 from ids), 'open');
-select * from public.create_booking((select week2 from ids), 'حجز مسؤول جديد', 1, '11111111-0000-0000-0000-000000000001');
+select * from public.create_booking((select week2 from ids), 'حجز مسؤول جديد', 1, '11111111-0000-0000-0000-000000000001', '01155550118');
 select t.ok(not (select is_paid from public.bookings where full_name = 'حجز مسؤول جديد'), 'أي حجز جديد يبدأ غير مدفوع');
 
 -- السعر ورقم إنستاباي يُحفظان مع الرحلة
@@ -353,6 +353,50 @@ select t.expect_error($q$select public.admin_save_trip((select id from rt), json
     array['11111111-0000-0000-0000-000000000001']::uuid[])$q$, 'route_map_url_check', 'رابط خريطة غير آمن مرفوض');
 select t.as_anon();
 select t.ok((select route_stops is not null from public.trips where id = (select id from rt)), 'الزائر يرى المسار والتنبيهات');
+
+-- =====================================================================
+-- 13ج) الهاتف إجباري، منع التكرار، وتعديل الراكب لحجزه بنفسه
+-- =====================================================================
+select t.as_anon();
+select t.expect_error($q$select * from public.create_booking((select id from rt), 'بدون هاتف', 1, '11111111-0000-0000-0000-000000000001')$q$, 'PHONE_REQUIRED', 'رقم الهاتف إجباري للزائر');
+select * from public.create_booking((select id from rt), 'أحمد إبراهيم السيد', 3, '11111111-0000-0000-0000-000000000001', '01099990001');
+select t.expect_error($q$select * from public.create_booking((select id from rt), 'احمد ابراهيم  السيد', 1, '11111111-0000-0000-0000-000000000001', '01099990002')$q$, 'DUPLICATE_NAME', 'نفس الاسم (حتى مع اختلاف الهمزات والمسافات) مرفوض');
+select t.expect_error($q$select * from public.create_booking((select id from rt), 'شخص مختلف', 1, '11111111-0000-0000-0000-000000000001', '+201099990001')$q$, 'DUPLICATE_PHONE', 'نفس رقم الهاتف مرفوض');
+
+select t.ok((select seats from public.find_my_booking((select id from rt), 'احمد ابراهيم السيد', '01099990001')) = 3, 'الراكب يجد حجزه بالاسم والهاتف');
+select t.expect_error($q$select * from public.find_my_booking((select id from rt), 'أحمد إبراهيم السيد', '01099990009')$q$, 'BOOKING_NOT_FOUND', 'هاتف خطأ لا يكشف الحجز');
+select t.expect_error($q$select * from public.find_my_booking((select id from rt), 'اسم آخر', '01099990001')$q$, 'BOOKING_NOT_FOUND', 'اسم خطأ لا يكشف الحجز');
+select public.update_my_booking((select id from rt), 'أحمد إبراهيم السيد', '01099990001', 5);
+select t.ok((select booked_seats from public.trips where id = (select id from rt)) = 5, 'زيادة المقاعد تُحدِّث السعة');
+select public.update_my_booking((select id from rt), 'أحمد إبراهيم السيد', '01099990001', 2);
+select t.ok((select booked_seats from public.trips where id = (select id from rt)) = 2, 'تقليل المقاعد يُتيحها للآخرين');
+select t.expect_error($q$select public.update_my_booking((select id from rt), 'أحمد إبراهيم السيد', '01099990001', 11)$q$, 'MAX_SEATS_PER_BOOKING', 'لا يتجاوز الحد الأقصى للحجز الواحد');
+select t.expect_error($q$update public.bookings set seats = 1$q$, 'permission denied', 'الزائر ما زال لا يعدّل الجدول مباشرة');
+
+-- الحجز المدفوع مقفول أمام الراكب
+reset role;
+update public.bookings set is_paid = true where full_name = 'أحمد إبراهيم السيد';
+select t.as_anon();
+select t.ok((select locked_reason from public.find_my_booking((select id from rt), 'أحمد إبراهيم السيد', '01099990001')) = 'PAID_LOCKED', 'الحجز المدفوع يظهر مقفولًا');
+select t.expect_error($q$select public.cancel_my_booking((select id from rt), 'أحمد إبراهيم السيد', '01099990001')$q$, 'PAID_LOCKED', 'الراكب لا يلغي حجزًا مدفوعًا بنفسه');
+reset role;
+update public.bookings set is_paid = false where full_name = 'أحمد إبراهيم السيد';
+select t.as_anon();
+
+-- الإلغاء ثم إعادة الحجز بنفس الاسم والهاتف
+select public.cancel_my_booking((select id from rt), 'أحمد إبراهيم السيد', '01099990001');
+select t.ok((select booked_seats from public.trips where id = (select id from rt)) = 0, 'الإلغاء يُرجع المقاعد');
+select * from public.create_booking((select id from rt), 'أحمد إبراهيم السيد', 1, '11111111-0000-0000-0000-000000000001', '01099990001');
+select t.ok((select booked_seats from public.trips where id = (select id from rt)) = 1, 'بعد الإلغاء يمكن الحجز بنفس الاسم والهاتف');
+
+-- بعد إغلاق الحجز لا تعديل
+select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
+select public.admin_set_trip_status((select id from rt), 'closed');
+select t.as_anon();
+select t.expect_error($q$select public.update_my_booking((select id from rt), 'أحمد إبراهيم السيد', '01099990001', 2)$q$, 'BOOKING_CLOSED', 'لا تعديل بعد إغلاق الحجز');
+select t.expect_error($q$select * from public.find_my_booking_row((select id from rt), 'أحمد إبراهيم السيد', '01099990001')$q$, 'permission denied', 'الدالة الداخلية غير متاحة للزائر');
+reset role;
+select t.ok((select count(*) from public.audit_log where entity = 'bookings' and action = 'cancel' and actor_id is null) >= 1, 'تعديلات الراكب مسجلة في سجل العمليات');
 
 -- =====================================================================
 -- 14) الثبات النهائي: المقاعد المخزنة = مجموع الحجوزات المؤكدة لكل رحلة

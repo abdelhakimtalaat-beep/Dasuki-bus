@@ -120,6 +120,20 @@ export interface BookingLookup {
   instapay_number: string | null;
 }
 
+/** حجز الراكب كما يراه هو (بعد التحقق بالاسم + الهاتف) */
+export interface MyBooking {
+  full_name: string;
+  seats: number;
+  pickup_point_name: string;
+  notes: string | null;
+  is_paid: boolean;
+  created_at: string;
+  /** أقصى عدد مقاعد يمكن الوصول إليه الآن (حد الحجز الواحد أو المتاح) */
+  max_seats: number;
+  /** سبب منع التعديل إن وجد: PAID_LOCKED | BOOKING_CLOSED | ... */
+  locked_reason: string | null;
+}
+
 export interface TripInput {
   title: string;
   trip_date: string;

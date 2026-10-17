@@ -2,6 +2,7 @@ import type { Api } from './types';
 import { ApiError } from '../errors';
 import { cairoLocalInputToIso } from '../format';
 import { EGYPT_MOBILE_RE, cleanName, normalizePhone, newRequestId } from '../validation';
+import { normalizeArabic } from '../text';
 import type {
   AdminSession,
   AuditEntry,
@@ -30,7 +31,7 @@ interface Db {
   session: AdminSession | null;
 }
 
-const KEY = 'dasuki-bus-demo-v3';
+const KEY = 'dasuki-bus-demo-v4';
 export const DEMO_CREDENTIALS = { email: 'admin@demo.local', password: 'demo1234' };
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -183,6 +184,35 @@ export function createDemoApi(): Api {
     return t;
   };
 
+  function checkDuplicates(tripId: string, name: string, phone: string | null, exceptId: string | null) {
+    const others = db.bookings.filter((b) => b.trip_id === tripId && b.status === 'confirmed' && b.id !== exceptId);
+    if (others.some((b) => normalizeArabic(b.full_name) === normalizeArabic(name))) throw new ApiError('DUPLICATE_NAME');
+    if (phone && others.some((b) => b.phone === phone)) throw new ApiError('DUPLICATE_PHONE');
+  }
+
+  function findMine(tripId: string, fullName: string, phone: string): DbBooking {
+    const ph = normalizePhone(phone);
+    if (!ph || !EGYPT_MOBILE_RE.test(ph)) throw new ApiError('INVALID_PHONE');
+    const b = db.bookings.find(
+      (x) =>
+        x.trip_id === tripId &&
+        x.status === 'confirmed' &&
+        x.phone === ph &&
+        normalizeArabic(x.full_name) === normalizeArabic(fullName),
+    );
+    if (!b) throw new ApiError('BOOKING_NOT_FOUND');
+    return b;
+  }
+
+  function lockedReason(t: Trip, b: DbBooking): string | null {
+    const now = new Date();
+    if (t.status === 'cancelled') return 'TRIP_CANCELLED';
+    if (t.status === 'closed' || now > new Date(t.booking_closes_at)) return 'BOOKING_CLOSED';
+    if (now < new Date(t.booking_opens_at)) return 'BOOKING_NOT_OPEN_YET';
+    if (b.is_paid) return 'PAID_LOCKED';
+    return null;
+  }
+
   function stats(tripId: string): TripStats {
     const t = trip(tripId);
     const conf = db.bookings.filter((b) => b.trip_id === tripId && b.status === 'confirmed');
@@ -279,6 +309,7 @@ export function createDemoApi(): Api {
       if (!input.pickup_point_id) throw new ApiError('PICKUP_REQUIRED');
       const phone = normalizePhone(input.phone);
       if (phone && !EGYPT_MOBILE_RE.test(phone)) throw new ApiError('INVALID_PHONE');
+      if (!phone && !db.session?.isAdmin) throw new ApiError('PHONE_REQUIRED');
       if (t.status === 'cancelled') throw new ApiError('TRIP_CANCELLED');
       const admin = db.session?.isAdmin;
       if (!admin) {
@@ -294,6 +325,7 @@ export function createDemoApi(): Api {
       }
       if (t.booked_seats + input.seats > t.capacity)
         throw new ApiError('NOT_ENOUGH_SEATS', String(t.capacity - t.booked_seats));
+      checkDuplicates(t.id, name, phone, null);
       const now = new Date().toISOString();
       const b: DbBooking = {
         id: newRequestId(),
@@ -347,6 +379,54 @@ export function createDemoApi(): Api {
         amount: b.seats * t.seat_price,
         instapay_number: t.instapay_number,
       };
+    },
+
+    async findMyBooking(tripId, fullName, phone) {
+      await delay();
+      const b = findMine(tripId, fullName, phone);
+      const t = trip(tripId);
+      return {
+        full_name: b.full_name,
+        seats: b.seats,
+        pickup_point_name: pointName(b.pickup_point_id),
+        notes: b.notes,
+        is_paid: b.is_paid,
+        created_at: b.created_at,
+        max_seats: Math.min(t.max_seats_per_booking, b.seats + (t.capacity - t.booked_seats)),
+        locked_reason: lockedReason(t, b),
+      };
+    },
+
+    async updateMyBooking(tripId, fullName, phone, seats) {
+      await delay();
+      const b = findMine(tripId, fullName, phone);
+      const t = trip(tripId);
+      const r = lockedReason(t, b);
+      if (r) throw new ApiError(r);
+      if (!Number.isInteger(seats) || seats < 1) throw new ApiError('INVALID_SEATS');
+      if (seats > t.max_seats_per_booking) throw new ApiError('MAX_SEATS_PER_BOOKING', String(t.max_seats_per_booking));
+      const used = t.booked_seats - b.seats;
+      if (used + seats > t.capacity) throw new ApiError('NOT_ENOUGH_SEATS', String(t.capacity - used));
+      const old = { ...b };
+      b.seats = seats;
+      b.updated_at = new Date().toISOString();
+      recompute(db, t.id);
+      audit('update', 'bookings', b.id, old, b);
+      save();
+    },
+
+    async cancelMyBooking(tripId, fullName, phone) {
+      await delay();
+      const b = findMine(tripId, fullName, phone);
+      const t = trip(tripId);
+      const r = lockedReason(t, b);
+      if (r) throw new ApiError(r);
+      const old = { ...b };
+      b.status = 'cancelled';
+      b.cancelled_at = b.updated_at = new Date().toISOString();
+      recompute(db, t.id);
+      audit('cancel', 'bookings', b.id, old, b);
+      save();
     },
 
     subscribeTrip(_tripId, onChange) {
@@ -473,6 +553,7 @@ export function createDemoApi(): Api {
       }
       if (next.status === 'confirmed') {
         if (t.status === 'cancelled') throw new ApiError('TRIP_CANCELLED');
+        checkDuplicates(t.id, next.full_name, next.phone, id);
         const used = db.bookings
           .filter((x) => x.trip_id === t.id && x.status === 'confirmed' && x.id !== id)
           .reduce((s, x) => s + x.seats, 0);

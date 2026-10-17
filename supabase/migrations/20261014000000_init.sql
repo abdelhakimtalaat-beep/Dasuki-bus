@@ -167,6 +167,17 @@ begin
 end;
 $$;
 
+-- توحيد الاسم للمقارنة: أ/إ/آ → ا ، ة → ه ، ى → ي ، إزالة التشكيل والتطويل والمسافات الزائدة
+create or replace function public.normalize_name(p text)
+returns text
+language sql
+immutable
+as $$
+  select lower(btrim(regexp_replace(
+           translate(regexp_replace(coalesce(p, ''), '[\u064B-\u0652\u0640]', '', 'g'), 'أإآةى', 'اااهي'),
+           '\s+', ' ', 'g')));
+$$;
+
 -- رقم حجز عشوائي غير قابل للتخمين: DSQ-XXXX-XXXX (بدون أحرف ملتبسة)
 create or replace function public.generate_booking_code()
 returns text
@@ -267,6 +278,21 @@ begin
   if new.status = 'confirmed' then
     if t.status = 'cancelled' then
       raise exception 'TRIP_CANCELLED';
+    end if;
+    -- منع تكرار الاسم أو رقم الهاتف في نفس الرحلة (الحجوزات المؤكدة فقط)
+    if tg_op = 'INSERT' or old.status <> 'confirmed'
+       or public.normalize_name(new.full_name) <> public.normalize_name(old.full_name)
+       or new.phone is distinct from old.phone then
+      if exists (select 1 from public.bookings b
+                  where b.trip_id = new.trip_id and b.status = 'confirmed' and b.id <> new.id
+                    and public.normalize_name(b.full_name) = public.normalize_name(new.full_name)) then
+        raise exception 'DUPLICATE_NAME';
+      end if;
+      if new.phone is not null and exists (select 1 from public.bookings b
+                  where b.trip_id = new.trip_id and b.status = 'confirmed' and b.id <> new.id
+                    and b.phone = new.phone) then
+        raise exception 'DUPLICATE_PHONE';
+      end if;
     end if;
     select coalesce(sum(b.seats), 0) into used
       from public.bookings b
@@ -444,6 +470,9 @@ begin
   if v_phone is not null and v_phone !~ '^01[0125][0-9]{8}$' then
     raise exception 'INVALID_PHONE';
   end if;
+  if v_phone is null and not v_admin then
+    raise exception 'PHONE_REQUIRED';
+  end if;
   if p_notes is not null and char_length(p_notes) > 500 then
     raise exception 'INVALID_NOTES';
   end if;
@@ -615,6 +644,129 @@ as $$
    where b.booking_code = upper(btrim(p_code));
 $$;
 
+
+-- =====================================================================
+-- تعديل الراكب لحجزه بنفسه (بالاسم + رقم الهاتف معًا، دون حساب)
+-- * متاح فقط أثناء فترة الحجز ولرحلة مفتوحة.
+-- * الحجز المدفوع لا يعدّله الراكب (يتواصل مع المسؤول) لتجنب مشاكل المبالغ.
+-- * السعة ومنع التكرار مضمونان بنفس قادح الحجوزات (قفل صف الرحلة).
+-- =====================================================================
+create or replace function public.find_my_booking_row(p_trip_id uuid, p_full_name text, p_phone text)
+returns public.bookings
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_phone text := public.normalize_phone(p_phone);
+  b public.bookings%rowtype;
+begin
+  if v_phone is null or v_phone !~ '^01[0125][0-9]{8}$' then
+    raise exception 'INVALID_PHONE';
+  end if;
+  select * into b from public.bookings x
+   where x.trip_id = p_trip_id and x.status = 'confirmed' and x.phone = v_phone
+     and public.normalize_name(x.full_name) = public.normalize_name(p_full_name)
+   limit 1;
+  if not found then
+    raise exception 'BOOKING_NOT_FOUND';
+  end if;
+  return b;
+end;
+$$;
+
+create or replace function public.my_booking_editable(t public.trips, b public.bookings)
+returns text
+language sql
+stable
+as $$
+  select case
+    when t.status = 'cancelled' then 'TRIP_CANCELLED'
+    when t.status = 'closed' or now() > t.booking_closes_at then 'BOOKING_CLOSED'
+    when now() < t.booking_opens_at then 'BOOKING_NOT_OPEN_YET'
+    when b.is_paid then 'PAID_LOCKED'
+    else null end;
+$$;
+
+create or replace function public.find_my_booking(p_trip_id uuid, p_full_name text, p_phone text)
+returns table (
+  full_name         text,
+  seats             int,
+  pickup_point_name text,
+  notes             text,
+  is_paid           boolean,
+  created_at        timestamptz,
+  max_seats         int,
+  locked_reason     text
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+#variable_conflict use_column
+declare
+  b public.bookings%rowtype := public.find_my_booking_row(p_trip_id, p_full_name, p_phone);
+  t public.trips%rowtype;
+begin
+  select * into t from public.trips where id = p_trip_id;
+  return query
+    select b.full_name, b.seats,
+           (select pp.name from public.pickup_points pp where pp.id = b.pickup_point_id),
+           b.notes, b.is_paid, b.created_at,
+           least(t.max_seats_per_booking, b.seats + (t.capacity - t.booked_seats)),
+           public.my_booking_editable(t, b);
+end;
+$$;
+
+create or replace function public.update_my_booking(p_trip_id uuid, p_full_name text, p_phone text, p_seats int)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  b public.bookings%rowtype := public.find_my_booking_row(p_trip_id, p_full_name, p_phone);
+  t public.trips%rowtype;
+  v_reason text;
+begin
+  select * into t from public.trips where id = p_trip_id for update;
+  v_reason := public.my_booking_editable(t, b);
+  if v_reason is not null then
+    raise exception '%', v_reason;
+  end if;
+  if p_seats is null or p_seats < 1 then
+    raise exception 'INVALID_SEATS';
+  end if;
+  if p_seats > t.max_seats_per_booking then
+    raise exception 'MAX_SEATS_PER_BOOKING' using detail = t.max_seats_per_booking::text;
+  end if;
+  update public.bookings set seats = p_seats where id = b.id;
+  return p_seats;
+end;
+$$;
+
+create or replace function public.cancel_my_booking(p_trip_id uuid, p_full_name text, p_phone text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  b public.bookings%rowtype := public.find_my_booking_row(p_trip_id, p_full_name, p_phone);
+  t public.trips%rowtype;
+  v_reason text;
+begin
+  select * into t from public.trips where id = p_trip_id for update;
+  v_reason := public.my_booking_editable(t, b);
+  if v_reason is not null then
+    raise exception '%', v_reason;
+  end if;
+  update public.bookings set status = 'cancelled' where id = b.id;
+end;
+$$;
+
 -- =====================================================================
 -- دوال الإدارة (تتحقق من الصلاحية داخل الخادم)
 -- =====================================================================
@@ -783,6 +935,9 @@ grant execute on function public.create_booking(uuid, text, int, uuid, text, tex
 grant execute on function public.get_trip_stats(uuid)                        to anon, authenticated;
 grant execute on function public.get_public_bookings(uuid)                   to anon, authenticated;
 grant execute on function public.lookup_booking(text)                        to anon, authenticated;
+grant execute on function public.find_my_booking(uuid, text, text)            to anon, authenticated;
+grant execute on function public.update_my_booking(uuid, text, text, int)     to anon, authenticated;
+grant execute on function public.cancel_my_booking(uuid, text, text)          to anon, authenticated;
 grant execute on function public.admin_save_trip(uuid, jsonb, uuid[])        to authenticated;
 grant execute on function public.admin_set_trip_status(uuid, public.trip_status) to authenticated;
 

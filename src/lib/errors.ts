@@ -32,6 +32,11 @@ const KNOWN_CODES = [
   'trips_window_chk',
   'pickup_points_name_uq',
   'capacity_check',
+  'PHONE_REQUIRED',
+  'DUPLICATE_NAME',
+  'DUPLICATE_PHONE',
+  'BOOKING_NOT_FOUND',
+  'PAID_LOCKED',
   'instapay_number_check',
 ] as const;
 
@@ -86,6 +91,16 @@ export function errorMessage(err: unknown): string {
       return 'نقطة التجمع المختارة غير متاحة لهذه الرحلة. اختر نقطة أخرى.';
     case 'PICKUP_REQUIRED':
       return 'يرجى اختيار نقطة التجمع.';
+    case 'PHONE_REQUIRED':
+      return 'رقم الهاتف مطلوب للحجز.';
+    case 'DUPLICATE_NAME':
+      return 'يوجد حجز مسجّل بنفس الاسم في هذه الرحلة. إن كان حجزك فعدّله من «عدّل حجزك»، وإن كان شخصًا آخر فاكتب الاسم رباعيًا.';
+    case 'DUPLICATE_PHONE':
+      return 'رقم الهاتف هذا مسجّل في حجز آخر لهذه الرحلة. لتغيير عدد المقاعد استخدم «عدّل حجزك».';
+    case 'BOOKING_NOT_FOUND':
+      return 'لم نجد حجزًا بهذا الاسم ورقم الهاتف. اكتبهما كما سجلتهما وقت الحجز.';
+    case 'PAID_LOCKED':
+      return 'حجزك مؤكد الدفع، لذا يتم تعديله عن طريق مسؤول الرحلة.';
     case 'INVALID_PHONE':
       return 'رقم الهاتف غير صحيح. اكتب رقمًا مصريًا من 11 رقمًا يبدأ بـ 010 أو 011 أو 012 أو 015.';
     case 'INVALID_NAME':

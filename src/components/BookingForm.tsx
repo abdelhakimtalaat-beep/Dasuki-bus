@@ -70,10 +70,11 @@ export function BookingForm({
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (inFlight.current || blocked) return; // منع الضغط المتكرر
-    const errs = validateBookingForm(v, {
-      remaining,
-      maxPerBooking: adminMode ? 50 : trip.max_seats_per_booking,
-    });
+    const errs = validateBookingForm(
+      v,
+      { remaining, maxPerBooking: adminMode ? 50 : trip.max_seats_per_booking },
+      { phoneRequired: !adminMode },
+    );
     setErrors(errs);
     if (Object.keys(errs).length) {
       const first = Object.keys(errs)[0];
@@ -100,6 +101,8 @@ export function BookingForm({
       const code = toApiError(err).code;
       setServerError(errorMessage(err));
       if (code === 'PICKUP_REQUIRED' || code === 'INVALID_PICKUP_POINT') setErrors({ pickup_point_id: errorMessage(err) });
+      if (code === 'DUPLICATE_NAME') setErrors({ full_name: errorMessage(err) });
+      if (code === 'DUPLICATE_PHONE' || code === 'PHONE_REQUIRED' || code === 'INVALID_PHONE') setErrors({ phone: errorMessage(err) });
     } finally {
       inFlight.current = false;
       setSubmitting(false);
@@ -187,10 +190,10 @@ export function BookingForm({
 
         <Field
           label="رقم الهاتف"
-          optional
+          optional={adminMode}
           htmlFor="bf-phone"
           error={errors.phone}
-          hint="يظهر للمسؤول فقط، للتواصل عند تغيير موعد الرحلة."
+          hint="يظهر للمسؤول فقط. ستحتاجه مع اسمك لتعديل حجزك أو إلغائه."
         >
           <Input
             id="bf-phone"
@@ -215,7 +218,7 @@ export function BookingForm({
             invalid={!!errors.notes}
             maxLength={500}
             rows={2}
-            placeholder="مثال: معنا كبير سن يحتاج مقعدًا أماميًا"
+            placeholder="سأركب معكم من على الطريق عند ....."
           />
         </Field>
       </fieldset>

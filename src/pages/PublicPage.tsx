@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { BookingForm } from '../components/BookingForm';
 import { Announcements, RouteCard } from '../components/TripInfo';
+import { ManageBooking } from '../components/ManageBooking';
 import { BusMap, OccupancySummary } from '../components/BusOccupancy';
 import { PublicPassengerList, SuccessModal } from '../components/PublicParts';
 import { Card, ErrorBox, Spinner, cx, useToast } from '../components/ui';
@@ -127,7 +128,12 @@ function TripView({ trip, onTripChanged }: { trip: Trip; onTripChanged: () => vo
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <Card className="order-2 p-5 sm:p-7 lg:order-1">
           <h2 className="text-xl font-extrabold">احجز مقعدك</h2>
-          <p className="mt-1 mb-5 text-muted">املأ البيانات واضغط تأكيد، ثم حوّل المبلغ وأرسل صورة الإيصال على واتساب.</p>
+          <p className="mt-1 mb-5 text-muted">
+            املأ البيانات واضغط تأكيد، ثم حوّل المبلغ وأرسل صورة الإيصال على واتساب.{' '}
+            <a href="#manage" onClick={(e) => { e.preventDefault(); document.getElementById('manage')?.scrollIntoView({ behavior: 'smooth' }); }} className="font-bold text-pine-700 underline underline-offset-4">
+              حجزت من قبل؟ عدّل حجزك
+            </a>
+          </p>
           {stats ? (
             <BookingForm trip={trip} points={points} remaining={stats.remaining_seats} onBooked={onBooked} />
           ) : (
@@ -172,6 +178,14 @@ function TripView({ trip, onTripChanged }: { trip: Trip; onTripChanged: () => vo
           )}
         </Card>
       </div>
+
+      <section id="manage" className="scroll-mt-4">
+        <Card className="p-5 sm:p-7">
+          <h2 className="text-xl font-extrabold">عدّل حجزك أو ألغِه</h2>
+          <p className="mt-1 mb-4 text-muted">اكتب اسمك ورقم هاتفك كما سجلتهما وقت الحجز.</p>
+          <ManageBooking trip={trip} onChanged={() => { void refresh(); onTripChanged(); }} />
+        </Card>
+      </section>
 
       <RouteCard trip={trip} />
 

@@ -21,7 +21,7 @@ test('التحقق من صحة الرقم المصري', () => {
     assert.ok(!isValidEgyptianPhone(bad), bad);
 });
 
-const base = { full_name: 'محمد أحمد', seats: 1, pickup_point_id: 'p1', phone: '', notes: '' };
+const base = { full_name: 'محمد أحمد', seats: 1, pickup_point_id: 'p1', phone: '01012345678', notes: '' };
 const limits = { remaining: 10, maxPerBooking: 10 };
 
 test('نموذج صالح بدون أخطاء', () => {
@@ -42,6 +42,11 @@ test('مقعد واحد متبقٍ لا يقبل حجز مقعدين', () => {
 test('الأتوبيس المكتمل', () => {
   const e = validateBookingForm(base, { remaining: 0, maxPerBooking: 10 });
   assert.equal(e.seats, 'اكتملت سعة الأتوبيس.');
+});
+
+test('رقم الهاتف إجباري للزائر واختياري للمسؤول', () => {
+  assert.ok(validateBookingForm({ ...base, phone: '' }, limits).phone);
+  assert.equal(validateBookingForm({ ...base, phone: '' }, limits, { phoneRequired: false }).phone, undefined);
 });
 
 test('صفر مقاعد مرفوض والهاتف الخاطئ مرفوض', () => {

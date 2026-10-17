@@ -49,6 +49,7 @@ export type BookingFormErrors = Partial<Record<keyof BookingFormValues, string>>
 export function validateBookingForm(
   v: BookingFormValues,
   limits: { remaining: number; maxPerBooking: number },
+  opts: { phoneRequired?: boolean } = {},
 ): BookingFormErrors {
   const errors: BookingFormErrors = {};
   const name = cleanName(v.full_name);
@@ -68,7 +69,9 @@ export function validateBookingForm(
 
   if (!v.pickup_point_id) errors.pickup_point_id = 'يرجى اختيار نقطة التجمع.';
 
-  if (v.phone.trim() !== '' && !isValidEgyptianPhone(v.phone)) {
+  if ((opts.phoneRequired ?? true) && v.phone.trim() === '') {
+    errors.phone = 'اكتب رقم هاتفك (يُستخدم أيضًا لتعديل حجزك لاحقًا).';
+  } else if (v.phone.trim() !== '' && !isValidEgyptianPhone(v.phone)) {
     errors.phone = 'رقم مصري من 11 رقمًا يبدأ بـ 010 أو 011 أو 012 أو 015.';
   }
   if (v.notes.length > 500) errors.notes = 'الملاحظات 500 حرف كحد أقصى.';

@@ -7,6 +7,7 @@ import type {
   Booking,
   BookingLookup,
   BookingResult,
+  MyBooking,
   PickupPoint,
   PublicBooking,
   Trip,
@@ -91,6 +92,22 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     async lookupBooking(code) {
       const rows = (await run(sb.rpc('lookup_booking', { p_code: code }))) as BookingLookup[];
       return rows[0] ? { ...rows[0], amount: Number(rows[0].amount) } : null;
+    },
+
+    async findMyBooking(tripId, fullName, phone) {
+      const rows = (await run(
+        sb.rpc('find_my_booking', { p_trip_id: tripId, p_full_name: fullName, p_phone: phone }),
+      )) as MyBooking[];
+      if (!rows[0]) throw new ApiError('BOOKING_NOT_FOUND');
+      return rows[0];
+    },
+
+    async updateMyBooking(tripId, fullName, phone, seats) {
+      await run(sb.rpc('update_my_booking', { p_trip_id: tripId, p_full_name: fullName, p_phone: phone, p_seats: seats }));
+    },
+
+    async cancelMyBooking(tripId, fullName, phone) {
+      await run(sb.rpc('cancel_my_booking', { p_trip_id: tripId, p_full_name: fullName, p_phone: phone }));
     },
 
     subscribeTrip(tripId, onChange) {

@@ -5,6 +5,7 @@ import type {
   BookingLookup,
   BookingPatch,
   BookingResult,
+  MyBooking,
   NewBookingInput,
   PickupPoint,
   PickupPointInput,
@@ -26,6 +27,10 @@ export interface Api {
   getPublicBookings(tripId: string): Promise<PublicBooking[]>;
   createBooking(input: NewBookingInput): Promise<BookingResult>;
   lookupBooking(code: string): Promise<BookingLookup | null>;
+  /** الراكب يجد حجزه بالاسم + رقم الهاتف معًا */
+  findMyBooking(tripId: string, fullName: string, phone: string): Promise<MyBooking>;
+  updateMyBooking(tripId: string, fullName: string, phone: string, seats: number): Promise<void>;
+  cancelMyBooking(tripId: string, fullName: string, phone: string): Promise<void>;
   /** يستدعي onChange عند أي تغيير في الرحلة/حجوزاتها. يرجع دالة لإلغاء الاشتراك. */
   subscribeTrip(tripId: string, onChange: () => void): () => void;
 

@@ -42,7 +42,7 @@ export function SuccessModal({
         />
         <Announcements trip={trip} compact />
         <p className="text-sm text-muted">
-          يظهر اسمك الآن في قائمة الركاب، ويمكنك البحث عنه بالاسم. لتعديل الحجز أو إلغائه تواصل مع مسؤول الرحلة.
+          يظهر اسمك الآن في قائمة الركاب. لزيادة أو تقليل المقاعد أو إلغاء الحجز استخدم «عدّل حجزك» أسفل الصفحة باسمك ورقم هاتفك.
         </p>
         <Button onClick={onClose} className="w-full">
           تم
