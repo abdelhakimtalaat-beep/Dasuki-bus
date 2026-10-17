@@ -16,3 +16,27 @@ test('الروابط الآمنة فقط', () => {
   assert.equal(safeGoogleEmbed('https://evil.com/maps'), null);
   assert.equal(safeGoogleEmbed('https://google.com.evil.com/maps'), null);
 });
+
+import { normalizeArabic } from './text';
+import { toWhatsAppNumber } from './whatsapp';
+
+test('البحث بالاسم يتجاهل اختلاف الهمزات والتاء المربوطة', () => {
+  assert.ok(normalizeArabic('أحمد عبد الله').includes(normalizeArabic('احمد')));
+  assert.ok(normalizeArabic('فاطمة إبراهيم').includes(normalizeArabic('ابراهيم')));
+  assert.ok(normalizeArabic('مصطفى').includes(normalizeArabic('مصطفي')));
+  assert.ok(normalizeArabic('فاطمة').includes(normalizeArabic('فاطمه')));
+});
+
+test('رقم واتساب بالصيغة الدولية', () => {
+  assert.equal(toWhatsAppNumber('01065553930'), '201065553930');
+});
+
+import { whatsAppPaymentLink } from './whatsapp';
+test('رابط واتساب برسالة جاهزة', () => {
+  const url = whatsAppPaymentLink('01065553930', 300, { name: 'عبد الحكيم طلعت', seats: 2, pickupPoint: 'الشروق' });
+  assert.ok(url.startsWith('https://wa.me/201065553930?text='));
+  const text = decodeURIComponent(url.split('text=')[1]);
+  assert.match(text, /عبد الحكيم طلعت/);
+  assert.match(text, /600 جنيه/);
+  assert.match(text, /الشروق/);
+});

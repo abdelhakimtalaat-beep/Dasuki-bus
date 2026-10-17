@@ -3,7 +3,7 @@ import { api } from '../lib/api';
 import { BookingForm } from '../components/BookingForm';
 import { Announcements, RouteCard } from '../components/TripInfo';
 import { BusMap, OccupancySummary } from '../components/BusOccupancy';
-import { LookupBooking, PublicPassengerList, SuccessModal } from '../components/PublicParts';
+import { PublicPassengerList, SuccessModal } from '../components/PublicParts';
 import { Card, ErrorBox, Spinner, cx, useToast } from '../components/ui';
 import { DemoBanner, SiteHeader, TripFacts } from '../components/Layout';
 import { errorMessage } from '../lib/errors';
@@ -127,7 +127,7 @@ function TripView({ trip, onTripChanged }: { trip: Trip; onTripChanged: () => vo
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <Card className="order-2 p-5 sm:p-7 lg:order-1">
           <h2 className="text-xl font-extrabold">احجز مقعدك</h2>
-          <p className="mt-1 mb-5 text-muted">املأ البيانات واضغط تأكيد — يظهر لك رقم الحجز فورًا.</p>
+          <p className="mt-1 mb-5 text-muted">املأ البيانات واضغط تأكيد، ثم حوّل المبلغ وأرسل صورة الإيصال على واتساب.</p>
           {stats ? (
             <BookingForm trip={trip} points={points} remaining={stats.remaining_seats} onBooked={onBooked} />
           ) : (
@@ -175,17 +175,11 @@ function TripView({ trip, onTripChanged }: { trip: Trip; onTripChanged: () => vo
 
       <RouteCard trip={trip} />
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <Card className="p-5 sm:p-7">
-          <h2 className="mb-4 text-xl font-extrabold">الركاب المسجلون</h2>
-          <PublicPassengerList rows={rows} />
-        </Card>
-        <Card className="h-fit p-5 sm:p-7">
-          <h2 className="text-xl font-extrabold">استعلم عن حجزك</h2>
-          <p className="mt-1 mb-4 text-muted">اكتب رقم الحجز الذي ظهر لك بعد التسجيل.</p>
-          <LookupBooking />
-        </Card>
-      </div>
+      <Card className="p-5 sm:p-7">
+        <h2 className="text-xl font-extrabold">الركاب المسجلون</h2>
+        <p className="mt-1 mb-4 text-muted">ابحث باسمك للتأكد من حجزك وحالة الدفع.</p>
+        <PublicPassengerList rows={rows} />
+      </Card>
 
       <SuccessModal result={success} trip={trip} onClose={() => setSuccess(null)} />
     </div>

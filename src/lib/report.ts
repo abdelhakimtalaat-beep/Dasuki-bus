@@ -37,7 +37,6 @@ export function reportSheets(r: TripReport, opts: { includeCancelled: boolean })
     subtitle: [tripLine, `${stats.booked_seats} من ${stats.capacity} مقعدًا محجوزًا — عدد الحجوزات: ${stats.total_bookings}`],
     columns: [
       { header: 'م', width: 6 },
-      { header: 'رقم الحجز', width: 16 },
       { header: 'الاسم الكامل', width: 30 },
       { header: 'عدد المقاعد', width: 11 },
       { header: 'نقطة التجمع', width: 18 },
@@ -50,7 +49,6 @@ export function reportSheets(r: TripReport, opts: { includeCancelled: boolean })
     ],
     rows: r.confirmed.map((b, i) => [
       i + 1,
-      b.booking_code,
       b.full_name,
       b.seats,
       b.pickup_point_name,
@@ -62,7 +60,7 @@ export function reportSheets(r: TripReport, opts: { includeCancelled: boolean })
       'مؤكد',
     ]),
   };
-  passengers.rows.push([null, null, 'الإجمالي', stats.booked_seats, null, null, stats.expected_amount, `مدفوع ${stats.paid_amount}`, null, null, null]);
+  passengers.rows.push([null, 'الإجمالي', stats.booked_seats, null, null, stats.expected_amount, `مدفوع ${stats.paid_amount}`, null, null, null]);
 
   const summary: SheetSpec = {
     name: 'ملخص الرحلة',
@@ -114,7 +112,6 @@ export function reportSheets(r: TripReport, opts: { includeCancelled: boolean })
       name: 'الحجوزات الملغاة',
       title: 'الحجوزات الملغاة',
       columns: [
-        { header: 'رقم الحجز', width: 16 },
         { header: 'الاسم الكامل', width: 30 },
         { header: 'عدد المقاعد', width: 11 },
         { header: 'نقطة التجمع', width: 18 },
@@ -124,7 +121,6 @@ export function reportSheets(r: TripReport, opts: { includeCancelled: boolean })
         { header: 'وقت الإلغاء', width: 19 },
       ],
       rows: r.cancelled.map((b) => [
-        b.booking_code,
         b.full_name,
         b.seats,
         b.pickup_point_name,

@@ -19,7 +19,7 @@ const ACTION: Record<string, string> = {
 function describe(e: AuditEntry): string {
   const d = (e.new_data ?? e.old_data ?? {}) as Record<string, unknown>;
   if (e.entity === 'bookings') {
-    const parts = [`${d.full_name ?? ''}`, `${d.seats ?? ''} مقعد`, `${d.booking_code ?? ''}`];
+    const parts = [`${d.full_name ?? ''}`, `${d.seats ?? ''} مقعد`];
     if (e.action === 'update' && e.old_data && e.new_data) {
       const changed = ['full_name', 'seats', 'pickup_point_id', 'phone', 'notes'].filter(
         (k) => JSON.stringify(e.old_data![k]) !== JSON.stringify(e.new_data![k]),

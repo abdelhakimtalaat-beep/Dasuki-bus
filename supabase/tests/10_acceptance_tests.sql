@@ -94,7 +94,7 @@ select t.ok((public.get_trip_stats((select week1 from ids))->>'pickup_points_use
 -- =====================================================================
 -- 2) الخصوصية: الزائر لا يرى الهواتف ولا جدول الحجوزات
 -- =====================================================================
-select t.ok((select display_name from public.get_public_bookings((select week1 from ids)) where row_no = 1) = 'أحمد م.', 'الاسم مقنّع في القائمة العامة');
+select t.ok((select display_name from public.get_public_bookings((select week1 from ids)) where row_no = 1) = 'أحمد محمد علي', 'الاسم كاملًا في القائمة العامة');
 select t.ok(not exists (select 1 from information_schema.routines r
               join information_schema.parameters p on p.specific_name = r.specific_name
              where r.routine_name = 'get_public_bookings' and p.parameter_name in ('phone','notes')),
@@ -297,7 +297,7 @@ select t.ok((public.get_trip_stats((select week1 from ids))->>'paid_amount')::nu
 select t.ok((public.get_trip_stats((select week1 from ids))->>'expected_amount')::numeric = 15000, 'المبلغ المتوقع = 50 × 300');
 select t.ok((select paid_at is not null from public.bookings where booking_code = (select booking_code from code)), 'يُسجَّل وقت تأكيد الدفع');
 select t.ok((select count(*) from public.audit_log where action = 'paid') = 1, 'سجل العمليات يوثق تأكيد الدفع');
-select t.ok((select is_paid from public.get_public_bookings((select week1 from ids)) where display_name = 'سيد ع.'), 'القائمة العامة تعرض حالة الدفع');
+select t.ok((select is_paid from public.get_public_bookings((select week1 from ids)) where display_name = 'سيد عبد الله'), 'القائمة العامة تعرض حالة الدفع');
 update public.bookings set is_paid = false where booking_code = (select booking_code from code);
 select t.ok((select paid_at is null from public.bookings where booking_code = (select booking_code from code)), 'إلغاء تأكيد الدفع يمسح وقت الدفع');
 update public.bookings set is_paid = true where booking_code = (select booking_code from code);

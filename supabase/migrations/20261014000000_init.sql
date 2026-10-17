@@ -557,7 +557,7 @@ as $$
   where t.id = p_trip_id;
 $$;
 
--- قائمة الركاب العامة: اسم مقنّع (الاسم الأول + أول حرف من الثاني)، بلا هاتف ولا ملاحظات
+-- قائمة الركاب العامة: الاسم كاملًا + المقاعد + نقطة التجمع + حالة الدفع (بلا هاتف ولا ملاحظات)
 create or replace function public.get_public_bookings(p_trip_id uuid)
 returns table (
   row_no            int,
@@ -573,10 +573,7 @@ security definer
 set search_path = public
 as $$
   select (row_number() over (order by b.created_at, b.id))::int,
-         split_part(b.full_name, ' ', 1)
-           || case when split_part(b.full_name, ' ', 2) <> ''
-                   then ' ' || left(split_part(b.full_name, ' ', 2), 1) || '.'
-                   else '' end,
+         b.full_name,
          b.seats,
          pp.name,
          b.created_at,

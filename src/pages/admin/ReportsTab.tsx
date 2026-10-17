@@ -180,7 +180,7 @@ export function PrintView({ tripId }: { tripId: string }) {
       <table className="mt-4 w-full border-collapse">
         <thead>
           <tr>
-            {['م', 'رقم الحجز', 'الاسم الكامل', 'المقاعد', 'نقطة التجمع', 'الهاتف', 'المبلغ', 'الدفع', 'ملاحظات', 'حضر'].map((h) => (
+            {['م', 'الاسم الكامل', 'المقاعد', 'نقطة التجمع', 'الهاتف', 'المبلغ', 'الدفع', 'ملاحظات', 'حضر'].map((h) => (
               <th key={h} className="border border-gray-400 bg-gray-100 px-2 py-1.5 text-start">
                 {h}
               </th>
@@ -191,9 +191,7 @@ export function PrintView({ tripId }: { tripId: string }) {
           {confirmed.map((b, i) => (
             <tr key={b.id} style={{ breakInside: 'avoid' }}>
               <td className="border border-gray-400 px-2 py-1.5">{i + 1}</td>
-              <td className="border border-gray-400 px-2 py-1.5" dir="ltr">
-                {b.booking_code}
-              </td>
+              
               <td className="border border-gray-400 px-2 py-1.5 font-bold">{b.full_name}</td>
               <td className="border border-gray-400 px-2 py-1.5 text-center font-bold">{b.seats}</td>
               <td className="border border-gray-400 px-2 py-1.5">{b.pickup_point_name}</td>

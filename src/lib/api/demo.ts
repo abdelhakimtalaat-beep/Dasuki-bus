@@ -246,17 +246,14 @@ export function createDemoApi(): Api {
       return db.bookings
         .filter((b) => b.trip_id === tripId && b.status === 'confirmed')
         .sort((a, b) => a.created_at.localeCompare(b.created_at))
-        .map((b, i) => {
-          const [first, second] = b.full_name.split(' ');
-          return {
-            row_no: i + 1,
-            display_name: first + (second ? ` ${second[0]}.` : ''),
-            seats: b.seats,
-            pickup_point_name: pointName(b.pickup_point_id),
-            created_at: b.created_at,
-            is_paid: b.is_paid,
-          };
-        });
+        .map((b, i) => ({
+          row_no: i + 1,
+          display_name: b.full_name,
+          seats: b.seats,
+          pickup_point_name: pointName(b.pickup_point_id),
+          created_at: b.created_at,
+          is_paid: b.is_paid,
+        }));
     },
 
     async createBooking(input) {

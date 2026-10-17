@@ -4,6 +4,7 @@ import { errorMessage } from '../../lib/errors';
 import { formatDateTime, formatMoney, seatsWord } from '../../lib/format';
 import { navigate } from '../../lib/hooks';
 import { cleanName, isValidEgyptianPhone, normalizePhone } from '../../lib/validation';
+import { normalizeArabic } from '../../lib/text';
 import type { Booking, PickupPoint, Trip, TripStats } from '../../lib/types';
 import { BookingForm } from '../../components/BookingForm';
 import { TripStatusBadge } from '../../components/Layout';
@@ -66,8 +67,7 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
       if (pay === 'unpaid' && b.is_paid) return false;
       if (!needle) return true;
       return (
-        b.full_name.toLowerCase().includes(needle) ||
-        b.booking_code.toLowerCase().includes(needle) ||
+        normalizeArabic(b.full_name).includes(normalizeArabic(needle)) ||
         (digits.length >= 3 && (b.phone ?? '').includes(digits))
       );
     });
@@ -172,7 +172,7 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
 
       <Card className="p-4 sm:p-5">
         <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto_auto]">
-          <Input type="search" placeholder="ابحث بالاسم أو رقم الهاتف أو رقم الحجز" value={q} onChange={(e) => setQ(e.target.value)} aria-label="بحث" />
+          <Input type="search" placeholder="ابحث بالاسم أو رقم الهاتف" value={q} onChange={(e) => setQ(e.target.value)} aria-label="بحث" />
           <Select value={point} onChange={(e) => setPoint(e.target.value)} aria-label="نقطة التجمع" className="md:w-44">
             <option value="">كل نقاط التجمع</option>
             {points.map((p) => (
@@ -211,7 +211,7 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
               <table className="w-full min-w-[1040px] text-[14px]">
                 <thead>
                   <tr className="border-b-2 border-line text-start text-muted">
-                    {['م', 'رقم الحجز', 'الاسم الكامل', 'المقاعد', 'نقطة التجمع', 'الهاتف', 'ملاحظات', 'وقت التسجيل', 'الحالة', 'الدفع', ''].map((h) => (
+                    {['م', 'الاسم الكامل', 'المقاعد', 'نقطة التجمع', 'الهاتف', 'ملاحظات', 'وقت التسجيل', 'الحالة', 'الدفع', ''].map((h) => (
                       <th key={h} className="px-2 py-2 text-start font-bold">
                         {h}
                       </th>
@@ -222,9 +222,6 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
                   {view.map((b, i) => (
                     <tr key={b.id} className={cx('border-b border-line align-top', b.status === 'cancelled' && 'text-muted')}>
                       <td className="px-2 py-2.5 tabular-nums">{i + 1}</td>
-                      <td className="px-2 py-2.5 font-semibold whitespace-nowrap tabular-nums" dir="ltr">
-                        {b.booking_code}
-                      </td>
                       <td className={cx('px-2 py-2.5 font-bold', b.status === 'cancelled' && 'line-through')}>{b.full_name}</td>
                       <td className="px-2 py-2.5 font-extrabold tabular-nums">{b.seats}</td>
                       <td className="px-2 py-2.5">{b.pickup_point_name}</td>
@@ -264,17 +261,13 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
                       <p className="text-sm text-muted">
                         {seatsWord(b.seats)} — {b.pickup_point_name}
                       </p>
-                      <p className="text-sm text-muted" dir="ltr" style={{ textAlign: 'right' }}>
-                        {b.booking_code}
-                        {b.phone && (
-                          <>
-                            {'  ·  '}
-                            <a className="text-pine-700" href={`tel:${b.phone}`}>
-                              {b.phone}
-                            </a>
-                          </>
-                        )}
-                      </p>
+                      {b.phone && (
+                        <p className="text-sm text-muted" dir="ltr" style={{ textAlign: 'right' }}>
+                          <a className="text-pine-700" href={`tel:${b.phone}`}>
+                            {b.phone}
+                          </a>
+                        </p>
+                      )}
                       {b.notes && <p className="mt-1 text-sm">{b.notes}</p>}
                     </div>
                     {b.status === 'confirmed' ? <Badge tone="green">مؤكد</Badge> : <Badge tone="red">ملغى</Badge>}
@@ -441,7 +434,7 @@ function EditBookingModal({
   }
 
   return (
-    <Modal open onClose={onClose} title={`تعديل الحجز ${booking.booking_code}`}>
+    <Modal open onClose={onClose} title={`تعديل حجز ${booking.full_name}`}>
       <form onSubmit={save} className="flex flex-col gap-4">
         <Field label="الاسم الكامل" htmlFor="eb-name">
           <Input id="eb-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
@@ -513,7 +506,7 @@ function CancelModal({
   return (
     <Modal open onClose={onClose} title="إلغاء الحجز">
       <p>
-        إلغاء حجز <b>{booking.full_name}</b> ({seatsWord(booking.seats)}، رقم {booking.booking_code})؟ ستصبح المقاعد متاحة للحجز
+        إلغاء حجز <b>{booking.full_name}</b> ({seatsWord(booking.seats)}، {booking.pickup_point_name})؟ ستصبح المقاعد متاحة للحجز
         فورًا، ويبقى الحجز محفوظًا في السجل ويمكن استعادته.
       </p>
       {err && <p className="mt-3 font-semibold text-red-700">{err}</p>}

@@ -1,10 +1,11 @@
-import { useMemo, useState, type FormEvent } from 'react';
-import { api } from '../lib/api';
-import { errorMessage } from '../lib/errors';
-import { formatDateTime, formatMoney, formatTime, formatTripDate, seatsWord, STATUS_LABEL } from '../lib/format';
-import type { BookingLookup, BookingResult, PublicBooking, Trip } from '../lib/types';
-import { Badge, Button, EmptyState, Input, Modal, Select, cx } from './ui';
+import { useMemo, useState } from 'react';
+import { formatDateTime, formatTime, formatTripDate, seatsWord } from '../lib/format';
+import type { BookingResult, PublicBooking, Trip } from '../lib/types';
+import { Button, EmptyState, Input, Modal, Select, cx } from './ui';
 import { InstaPayBox } from './Payment';
+import { normalizeArabic } from '../lib/text';
+
+export { normalizeArabic };
 import { Announcements } from './TripInfo';
 
 // ------------------------------------------------------------------ نجاح الحجز
@@ -17,30 +18,11 @@ export function SuccessModal({
   trip: Trip;
   onClose: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
   if (!result) return null;
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(result.booking_code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* المتصفح لا يدعم النسخ — الرقم ظاهر للتصوير */
-    }
-  };
   return (
     <Modal open onClose={onClose} title={result.already_existed ? 'هذا الحجز مسجّل بالفعل' : 'تم تسجيل الحجز بنجاح'}>
       <div className="flex flex-col gap-5">
-        <div className="rounded-xl border-2 border-dashed border-brass-500/60 bg-brass-100/60 p-4 text-center">
-          <p className="text-sm font-bold text-brass-700">رقم الحجز — احتفظ به للرجوع إليه</p>
-          <p dir="ltr" className="mt-1 text-[28px] font-extrabold tracking-wider text-ink tabular-nums">
-            {result.booking_code}
-          </p>
-          <button onClick={copy} className="mt-1 text-sm font-bold text-pine-700 underline underline-offset-4">
-            {copied ? 'تم النسخ' : 'نسخ رقم الحجز'}
-          </button>
-        </div>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[15px]">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-xl bg-paper p-4 text-[15px]">
           <dt className="text-muted">الاسم</dt>
           <dd className="font-bold">{result.full_name}</dd>
           <dt className="text-muted">عدد المقاعد</dt>
@@ -55,13 +37,12 @@ export function SuccessModal({
         <InstaPayBox
           number={trip.instapay_number}
           seatPrice={trip.seat_price}
-          seats={result.seats}
-          bookingCode={result.booking_code}
+          details={{ name: result.full_name, seats: result.seats, pickupPoint: result.pickup_point_name }}
           compact
         />
         <Announcements trip={trip} compact />
         <p className="text-sm text-muted">
-          صوّر هذه الشاشة أو انسخ رقم الحجز. لتعديل الحجز أو إلغائه تواصل مع مسؤول الرحلة واذكر رقم الحجز.
+          يظهر اسمك الآن في قائمة الركاب، ويمكنك البحث عنه بالاسم. لتعديل الحجز أو إلغائه تواصل مع مسؤول الرحلة.
         </p>
         <Button onClick={onClose} className="w-full">
           تم
@@ -72,6 +53,7 @@ export function SuccessModal({
 }
 
 // ------------------------------------------------------------------ القائمة العامة
+
 type SortKey = 'time' | 'name' | 'point';
 export function PublicPassengerList({ rows }: { rows: PublicBooking[] }) {
   const [q, setQ] = useState('');
@@ -79,9 +61,9 @@ export function PublicPassengerList({ rows }: { rows: PublicBooking[] }) {
   const [sort, setSort] = useState<SortKey>('time');
   const points = useMemo(() => [...new Set(rows.map((r) => r.pickup_point_name))], [rows]);
   const view = useMemo(() => {
-    const needle = q.trim();
+    const needle = normalizeArabic(q);
     const out = rows.filter(
-      (r) => (!needle || r.display_name.includes(needle)) && (!point || r.pickup_point_name === point),
+      (r) => (!needle || normalizeArabic(r.display_name).includes(needle)) && (!point || r.pickup_point_name === point),
     );
     out.sort((a, b) =>
       sort === 'name'
@@ -99,7 +81,7 @@ export function PublicPassengerList({ rows }: { rows: PublicBooking[] }) {
       <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
         <Input
           type="search"
-          placeholder="ابحث بالاسم"
+          placeholder="ابحث عن حجزك بالاسم"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           aria-label="ابحث بالاسم"
@@ -155,81 +137,8 @@ export function PublicPassengerList({ rows }: { rows: PublicBooking[] }) {
         </>
       )}
       <p className="mt-3 text-[13px] text-muted">
-        حفاظًا على الخصوصية تُعرض الأسماء مختصرة ولا تظهر أرقام الهواتف أو الملاحظات.
+        للتأكد من حجزك ابحث باسمك. أرقام الهواتف والملاحظات لا تظهر لأحد غير مسؤول الرحلة.
       </p>
-    </div>
-  );
-}
-
-// ------------------------------------------------------------------ الاستعلام برقم الحجز
-export function LookupBooking() {
-  const [code, setCode] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [res, setRes] = useState<BookingLookup | null | undefined>(undefined);
-  const [err, setErr] = useState<string | null>(null);
-  async function go(e: FormEvent) {
-    e.preventDefault();
-    if (!code.trim()) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      setRes(await api.lookupBooking(code));
-    } catch (x) {
-      setErr(errorMessage(x));
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <div>
-      <form onSubmit={go} className="flex gap-2">
-        <Input
-          dir="ltr"
-          className="text-right uppercase"
-          placeholder="DSQ-XXXX-XXXX"
-          value={code}
-          onChange={(e) => {
-            setCode(e.target.value);
-            setRes(undefined);
-          }}
-          aria-label="رقم الحجز"
-          maxLength={20}
-        />
-        <Button type="submit" variant="secondary" loading={busy} className="shrink-0">
-          استعلام
-        </Button>
-      </form>
-      {err && <p className="mt-3 font-semibold text-red-700">{err}</p>}
-      {res === null && <p className="mt-3 font-semibold text-red-700">لا يوجد حجز بهذا الرقم. تأكد من كتابته كما ظهر لك.</p>}
-      {res && (
-        <div className="mt-3 rounded-xl bg-pine-50 p-4 text-[15px]">
-          <div className="flex items-center justify-between gap-2">
-            <p className="font-extrabold">{res.full_name}</p>
-            <span className="flex gap-1.5">
-              {res.status === 'confirmed' ? <Badge tone="green">مؤكد</Badge> : <Badge tone="red">ملغى</Badge>}
-              {res.status === 'confirmed' &&
-                (res.is_paid ? <Badge tone="green">مدفوع</Badge> : <Badge tone="amber">بانتظار الدفع</Badge>)}
-            </span>
-          </div>
-          <p className="mt-1 text-muted">
-            {seatsWord(res.seats)} من {res.pickup_point_name} — {formatTripDate(res.trip_date)}، التحرك{' '}
-            {formatTime(res.departure_time)}
-          </p>
-          <p className="mt-1">
-            المبلغ: <b className="tabular-nums">{formatMoney(res.amount)}</b>
-            {res.status === 'confirmed' && !res.is_paid && res.instapay_number && (
-              <>
-                {' '}
-                — حوّله على إنستاباي{' '}
-                <b dir="ltr" className="select-all">
-                  {res.instapay_number}
-                </b>
-              </>
-            )}
-          </p>
-          {res.trip_status === 'cancelled' && <p className="mt-1 font-bold text-red-700">تنبيه: الرحلة {STATUS_LABEL.cancelled}.</p>}
-        </div>
-      )}
     </div>
   );
 }
