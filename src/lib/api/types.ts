@@ -31,8 +31,6 @@ export interface Api {
   findMyBooking(tripId: string, fullName: string, phone: string): Promise<MyBooking>;
   updateMyBooking(tripId: string, fullName: string, phone: string, seats: number): Promise<void>;
   cancelMyBooking(tripId: string, fullName: string, phone: string): Promise<void>;
-  /** رفع صورة إيصال التحويل (data URL مضغوط) — يرجع وقت الرفع */
-  uploadMyReceipt(tripId: string, fullName: string, phone: string, image: string): Promise<string>;
   /** يستدعي onChange عند أي تغيير في الرحلة/حجوزاتها. يرجع دالة لإلغاء الاشتراك. */
   subscribeTrip(tripId: string, onChange: () => void): () => void;
 
@@ -49,7 +47,5 @@ export interface Api {
   setTripStatus(id: string, status: TripStatus): Promise<void>;
   listBookings(tripId: string): Promise<Booking[]>;
   updateBooking(id: string, patch: BookingPatch): Promise<void>;
-  /** صورة الإيصال لحجز (للمسؤول فقط) */
-  getReceipt(bookingId: string): Promise<{ image: string; uploaded_at: string } | null>;
   listAudit(limit: number): Promise<AuditEntry[]>;
 }

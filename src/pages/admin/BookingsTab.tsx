@@ -15,9 +15,7 @@ import type { BookingResult } from '../../lib/types';
 
 type SortKey = 'time' | 'name' | 'point';
 type StatusFilter = 'confirmed' | 'cancelled' | 'all';
-type PayFilter = 'all' | 'paid' | 'unpaid' | 'receipt';
-
-const hasPendingReceipt = (b: Booking) => !!b.receipt_uploaded_at && !b.is_paid && b.status === 'confirmed';
+type PayFilter = 'all' | 'paid' | 'unpaid';
 
 export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged: () => void }) {
   const toast = useToast();
@@ -36,7 +34,6 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState<BookingResult | null>(null);
   const [exporting, setExporting] = useState(false);
-  const [viewingReceipt, setViewingReceipt] = useState<Booking | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -68,7 +65,6 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
       if (point && b.pickup_point_id !== point) return false;
       if (pay === 'paid' && !b.is_paid) return false;
       if (pay === 'unpaid' && b.is_paid) return false;
-      if (pay === 'receipt' && !hasPendingReceipt(b)) return false;
       if (!needle) return true;
       return (
         normalizeArabic(b.full_name).includes(normalizeArabic(needle)) ||
@@ -129,7 +125,6 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
       </div>
     );
   }
-  const pendingReceipts = bookings.filter(hasPendingReceipt).length;
   const viewSeats = view.filter((b) => b.status === 'confirmed').reduce((s, b) => s + b.seats, 0);
 
   return (
@@ -173,21 +168,6 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
           <div className="h-full bg-pine-800" style={{ width: `${(100 * stats.paid_seats) / stats.capacity}%` }} />
           <div className="h-full bg-leaf-300" style={{ width: `${(100 * (stats.booked_seats - stats.paid_seats)) / stats.capacity}%` }} />
         </div>
-        {pendingReceipts > 0 && (
-          <button
-            type="button"
-            onClick={() => {
-              setPay('receipt');
-              setStatus('confirmed');
-            }}
-            className="mt-4 flex w-full items-center justify-between gap-3 rounded-xl border border-brass-500 bg-brass-100 px-4 py-3 text-start font-bold text-brass-700 hover:bg-brass-100/70"
-          >
-            <span>
-              📎 {pendingReceipts === 1 ? 'إيصال دفع واحد' : `${pendingReceipts} إيصالات دفع`} بانتظار مراجعتك
-            </span>
-            <span className="text-sm underline underline-offset-4">اعرضها</span>
-          </button>
-        )}
       </Card>
 
       <Card className="p-4 sm:p-5">
@@ -210,7 +190,6 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
             <option value="all">الدفع: الكل</option>
             <option value="paid">مدفوع</option>
             <option value="unpaid">بانتظار الدفع</option>
-            <option value="receipt">إيصال بانتظار المراجعة</option>
           </Select>
           <Select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="الترتيب" className="md:w-44">
             <option value="time">وقت التسجيل</option>
@@ -262,7 +241,6 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
                       </td>
                       <td className="px-2 py-1.5">
                         <PayToggle b={b} price={trip.seat_price} busy={payBusy === b.id} onToggle={togglePaid} />
-                        <ReceiptLink b={b} onOpen={setViewingReceipt} />
                       </td>
                       <td className="px-2 py-1.5">
                         <RowActions b={b} onEdit={setEditing} onCancel={setCancelling} onRestore={restore} />
@@ -296,7 +274,6 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <PayToggle b={b} price={trip.seat_price} busy={payBusy === b.id} onToggle={togglePaid} />
-                    <ReceiptLink b={b} onOpen={setViewingReceipt} />
                     <RowActions b={b} onEdit={setEditing} onCancel={setCancelling} onRestore={restore} />
                   </div>
                 </li>
@@ -345,115 +322,10 @@ export function BookingsTab({ trip, onTripChanged }: { trip: Trip; onTripChanged
         />
       </Modal>
       <SuccessModal result={added} trip={trip} onClose={() => setAdded(null)} />
-      <ReceiptModal
-        booking={viewingReceipt && (bookings.find((x) => x.id === viewingReceipt.id) ?? viewingReceipt)}
-        price={trip.seat_price}
-        busy={!!viewingReceipt && payBusy === viewingReceipt.id}
-        onConfirm={async (b) => {
-          await togglePaid(b);
-          setViewingReceipt(null);
-        }}
-        onClose={() => setViewingReceipt(null)}
-      />
     </div>
   );
 }
 
-function ReceiptLink({ b, onOpen }: { b: Booking; onOpen: (b: Booking) => void }) {
-  if (!b.receipt_uploaded_at) return null;
-  const pending = !b.is_paid;
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(b)}
-      className={cx(
-        'mt-1 inline-flex min-h-8 items-center gap-1 rounded-lg px-2 text-[13px] font-bold whitespace-nowrap',
-        pending ? 'bg-brass-100 text-brass-700 hover:bg-brass-100/70' : 'text-pine-700 hover:underline',
-      )}
-    >
-      📎 {pending ? 'إيصال جديد — راجعه' : 'عرض الإيصال'}
-    </button>
-  );
-}
-
-/** عرض صورة إيصال التحويل وتأكيد الدفع منها مباشرة */
-function ReceiptModal({
-  booking,
-  price,
-  busy,
-  onConfirm,
-  onClose,
-}: {
-  booking: Booking | null;
-  price: number;
-  busy: boolean;
-  onConfirm: (b: Booking) => Promise<void>;
-  onClose: () => void;
-}) {
-  const [img, setImg] = useState<{ id: string; image: string | null; error?: string } | null>(null);
-  const [zoom, setZoom] = useState(false);
-  useEffect(() => {
-    if (!booking) return;
-    let alive = true;
-    setZoom(false);
-    api
-      .getReceipt(booking.id)
-      .then((r) => alive && setImg({ id: booking.id, image: r?.image ?? null }))
-      .catch((e) => alive && setImg({ id: booking.id, image: null, error: errorMessage(e) }));
-    return () => {
-      alive = false;
-    };
-  }, [booking?.id, booking?.receipt_uploaded_at]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!booking) return null;
-  const ready = img && img.id === booking.id;
-  return (
-    <Modal open onClose={onClose} title={`إيصال التحويل — ${booking.full_name}`}>
-      <div className="flex flex-col gap-4">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-xl bg-paper p-3 text-[15px]">
-          <dt className="text-muted">المطلوب</dt>
-          <dd className="font-extrabold tabular-nums">
-            {formatMoney(booking.seats * price)} <span className="font-normal text-muted">({seatsWord(booking.seats)})</span>
-          </dd>
-          <dt className="text-muted">الهاتف</dt>
-          <dd dir="ltr" className="text-end tabular-nums">{booking.phone ?? '—'}</dd>
-          <dt className="text-muted">وقت الرفع</dt>
-          <dd>{booking.receipt_uploaded_at ? formatDateTime(booking.receipt_uploaded_at) : '—'}</dd>
-        </dl>
-        <div className="flex min-h-48 items-center justify-center overflow-hidden rounded-xl border border-line bg-white">
-          {!ready ? (
-            <Spinner />
-          ) : img.image ? (
-            <button type="button" onClick={() => setZoom((z) => !z)} className="block w-full" title={zoom ? 'تصغير' : 'تكبير'}>
-              <img
-                src={img.image}
-                alt={`إيصال تحويل ${booking.full_name}`}
-                className={cx('mx-auto w-full object-contain', zoom ? 'max-h-none' : 'max-h-[55vh]')}
-              />
-            </button>
-          ) : (
-            <p className="p-6 text-center text-muted">{img.error ?? 'لا توجد صورة إيصال لهذا الحجز.'}</p>
-          )}
-        </div>
-        <p className="text-sm text-muted">راجع المبلغ ورقم المحوَّل إليه في الصورة، وتأكد من وصول التحويل فعلًا في حسابك قبل التأكيد.</p>
-        <div className="flex flex-wrap gap-2">
-          {booking.is_paid ? (
-            <Badge tone="green">✓ تم تأكيد الدفع</Badge>
-          ) : (
-            booking.status === 'confirmed' && (
-              <Button loading={busy} onClick={() => void onConfirm(booking)} className="flex-1">
-                تأكيد الدفع ({formatMoney(booking.seats * price)})
-              </Button>
-            )
-          )}
-          <Button variant="secondary" onClick={onClose}>
-            إغلاق
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
 
 function PayToggle({
   b,

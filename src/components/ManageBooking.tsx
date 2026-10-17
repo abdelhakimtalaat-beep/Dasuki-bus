@@ -144,7 +144,7 @@ export function ManageBooking({ trip, onChanged }: { trip: Trip; onChanged: () =
                 mine.is_paid ? 'bg-pine-800 text-white' : 'bg-leaf-300/60 text-pine-900',
               )}
             >
-              {mine.is_paid ? 'مدفوع' : mine.receipt_uploaded_at ? 'الإيصال قيد المراجعة' : 'بانتظار الدفع'}
+              {mine.is_paid ? 'مدفوع' : 'بانتظار الدفع'}
             </span>
           </div>
           <p className="mt-1 text-muted">
@@ -200,6 +200,16 @@ export function ManageBooking({ trip, onChanged }: { trip: Trip; onChanged: () =
                 </div>
                 <span className="text-sm text-muted">الحد الأقصى المتاح لك الآن: {max}</span>
               </div>
+              {!mine.is_paid && !changed && trip.instapay_number && (
+                <div className="mt-4">
+                  <InstaPayBox
+                    compact
+                    number={trip.instapay_number}
+                    seatPrice={trip.seat_price}
+                    details={{ name: mine.full_name, seats: mine.seats, pickupPoint: mine.pickup_point_name }}
+                  />
+                </div>
+              )}
               {changed && (
                 <p className="mt-2 text-[15px]">
                   المبلغ بعد التعديل: <b className="tabular-nums">{formatMoney(seats * trip.seat_price)}</b>
@@ -248,19 +258,6 @@ export function ManageBooking({ trip, onChanged }: { trip: Trip; onChanged: () =
                 </p>
               )}
             </>
-          )}
-
-          {!mine.is_paid && !changed && locked !== 'TRIP_CANCELLED' && trip.instapay_number && (
-            <div className="mt-4">
-              <InstaPayBox
-                compact
-                number={trip.instapay_number}
-                seatPrice={trip.seat_price}
-                details={{ name: mine.full_name, seats: mine.seats, pickupPoint: mine.pickup_point_name }}
-                upload={{ tripId: trip.id, name: cleanName(name), phone, uploadedAt: mine.receipt_uploaded_at }}
-                onUploaded={onChanged}
-              />
-            </div>
           )}
         </div>
       )}

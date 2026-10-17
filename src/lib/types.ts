@@ -64,8 +64,6 @@ export interface PublicBooking {
   pickup_point_name: string;
   created_at: string;
   is_paid: boolean;
-  /** رفع الراكب صورة الإيصال ولم يؤكدها المسؤول بعد */
-  has_receipt?: boolean;
 }
 
 export interface Booking {
@@ -84,8 +82,6 @@ export interface Booking {
   created_at: string;
   updated_at: string;
   cancelled_at: string | null;
-  /** وقت رفع صورة إيصال التحويل (إن وُجدت) */
-  receipt_uploaded_at: string | null;
 }
 
 export interface NewBookingInput {
@@ -106,8 +102,6 @@ export interface BookingResult {
   created_at: string;
   remaining_seats: number;
   already_existed: boolean;
-  /** رقم الهاتف كما أُرسل (للرفع اللاحق لصورة الإيصال) — لا يأتي من الخادم */
-  phone?: string | null;
 }
 
 export interface BookingLookup {
@@ -138,7 +132,6 @@ export interface MyBooking {
   max_seats: number;
   /** سبب منع التعديل إن وجد: PAID_LOCKED | BOOKING_CLOSED | ... */
   locked_reason: string | null;
-  receipt_uploaded_at: string | null;
 }
 
 export interface TripInput {

@@ -13,7 +13,6 @@ const ACTION: Record<string, string> = {
   restore: 'استعادة',
   paid: 'تأكيد دفع',
   unpaid: 'إلغاء تأكيد دفع',
-  receipt: 'رفع إيصال دفع',
   delete: 'حذف',
 };
 

@@ -55,7 +55,6 @@ const mk = (i: number, o: Partial<Booking>): Booking => ({
   created_at: `2026-10-1${i}T08:00:00Z`,
   updated_at: `2026-10-1${i}T08:00:00Z`,
   cancelled_at: null,
-  receipt_uploaded_at: null,
   ...o,
 });
 const bookings = [

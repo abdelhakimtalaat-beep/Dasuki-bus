@@ -38,9 +38,6 @@ const KNOWN_CODES = [
   'BOOKING_NOT_FOUND',
   'PAID_LOCKED',
   'instapay_number_check',
-  'ALREADY_PAID',
-  'RECEIPT_TOO_LARGE',
-  'INVALID_RECEIPT',
 ] as const;
 
 /** يحوّل أي خطأ (من Supabase أو الشبكة) إلى ApiError برمز معروف. */
@@ -104,12 +101,6 @@ export function errorMessage(err: unknown): string {
       return 'لم نجد حجزًا بهذا الاسم ورقم الهاتف. اكتبهما كما سجلتهما وقت الحجز.';
     case 'PAID_LOCKED':
       return 'حجزك مؤكد الدفع، لذا يتم تعديله عن طريق مسؤول الرحلة.';
-    case 'ALREADY_PAID':
-      return 'تم تأكيد دفع هذا الحجز بالفعل — لا حاجة لرفع إيصال.';
-    case 'RECEIPT_TOO_LARGE':
-      return 'حجم الصورة كبير جدًا. جرّب لقطة شاشة للإيصال بدل صورة الكاميرا.';
-    case 'INVALID_RECEIPT':
-      return 'الملف المختار ليس صورة. اختر صورة الإيصال (JPG أو PNG).';
     case 'INVALID_PHONE':
       return 'رقم الهاتف غير صحيح. اكتب رقمًا مصريًا من 11 رقمًا يبدأ بـ 010 أو 011 أو 012 أو 015.';
     case 'INVALID_NAME':

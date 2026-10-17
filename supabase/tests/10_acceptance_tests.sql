@@ -399,30 +399,6 @@ reset role;
 select t.ok((select count(*) from public.audit_log where entity = 'bookings' and action = 'cancel' and actor_id is null) >= 1, 'تعديلات الراكب مسجلة في سجل العمليات');
 
 -- =====================================================================
--- 13د) رفع صورة إيصال الدفع
--- =====================================================================
-select t.as_anon();
-select t.ok(public.upload_my_receipt((select id from rt), 'احمد ابراهيم السيد', '01099990001', 'data:image/jpeg;base64,/9j/4AAQSkZJRg==') is not null,
-  'الراكب يرفع صورة الإيصال (حتى بعد إغلاق الحجز)');
-select t.ok((select receipt_uploaded_at is not null from public.find_my_booking((select id from rt), 'أحمد إبراهيم السيد', '01099990001')), 'حجزه يظهر أن الإيصال مرفوع');
-select t.ok((select has_receipt from public.get_public_bookings((select id from rt)) where display_name = 'أحمد إبراهيم السيد'), 'القائمة العامة تُظهر «الإيصال قيد المراجعة»');
-select public.upload_my_receipt((select id from rt), 'أحمد إبراهيم السيد', '01099990001', 'data:image/png;base64,iVBORw0KGgo=');
-select t.expect_error($q$select public.upload_my_receipt((select id from rt), 'أحمد إبراهيم السيد', '01099990009', 'data:image/jpeg;base64,AAAA')$q$, 'BOOKING_NOT_FOUND', 'هاتف خطأ لا يرفع إيصالًا');
-select t.expect_error($q$select public.upload_my_receipt((select id from rt), 'أحمد إبراهيم السيد', '01099990001', 'data:text/html;base64,PHNjcmlwdD4=')$q$, 'INVALID_RECEIPT', 'ملف ليس صورة مرفوض');
-select t.expect_error($q$select public.upload_my_receipt((select id from rt), 'أحمد إبراهيم السيد', '01099990001', 'data:image/jpeg;base64,' || repeat('A', 700000))$q$, 'RECEIPT_TOO_LARGE', 'صورة كبيرة جدًا مرفوضة');
-select t.expect_error('select * from public.booking_receipts', 'permission denied', 'الزائر لا يرى صور الإيصالات');
-select t.as_user('bbbbbbbb-0000-0000-0000-000000000002');
-select t.ok((select count(*) from public.booking_receipts) = 0, 'مستخدم غير مسؤول لا يرى صور الإيصالات');
-select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
-select t.ok((select image from public.booking_receipts r join public.bookings b on b.id = r.booking_id where b.full_name = 'أحمد إبراهيم السيد') like 'data:image/png;%',
-  'المسؤول يرى أحدث صورة إيصال');
-update public.bookings set is_paid = true where full_name = 'أحمد إبراهيم السيد';
-select t.as_anon();
-select t.expect_error($q$select public.upload_my_receipt((select id from rt), 'أحمد إبراهيم السيد', '01099990001', 'data:image/jpeg;base64,AAAA')$q$, 'ALREADY_PAID', 'لا رفع بعد تأكيد الدفع');
-reset role;
-select t.ok((select count(*) from public.audit_log where entity = 'bookings' and action = 'receipt') = 2, 'رفع الإيصال مسجل في سجل العمليات');
-
--- =====================================================================
 -- 14) الثبات النهائي: المقاعد المخزنة = مجموع الحجوزات المؤكدة لكل رحلة
 -- =====================================================================
 reset role;

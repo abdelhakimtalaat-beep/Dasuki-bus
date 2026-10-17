@@ -38,7 +38,6 @@ export function SuccessModal({
           number={trip.instapay_number}
           seatPrice={trip.seat_price}
           details={{ name: result.full_name, seats: result.seats, pickupPoint: result.pickup_point_name }}
-          upload={result.phone ? { tripId: trip.id, name: result.full_name, phone: result.phone } : undefined}
           compact
         />
         <Announcements trip={trip} compact />
@@ -127,9 +126,7 @@ export function PublicPassengerList({ rows }: { rows: PublicBooking[] }) {
                   )}
                 >
                   {seatsWord(r.seats)}
-                  <span className="block text-[11px] font-bold opacity-90">
-                    {r.is_paid ? 'مدفوع' : r.has_receipt ? 'الإيصال قيد المراجعة' : 'بانتظار الدفع'}
-                  </span>
+                  <span className="block text-[11px] font-bold opacity-90">{r.is_paid ? 'مدفوع' : 'بانتظار الدفع'}</span>
                 </span>
               </li>
             ))}

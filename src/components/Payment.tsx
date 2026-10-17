@@ -3,7 +3,6 @@ import { formatMoney, seatsWord } from '../lib/format';
 import { cx } from './ui';
 import { whatsAppPaymentLink, type PaymentDetails } from '../lib/whatsapp';
 import { currentMobileOS, instaPayAppLink } from '../lib/instapay';
-import { ReceiptUpload, type ReceiptTarget } from './ReceiptUpload';
 
 export { whatsAppPaymentLink };
 export type { PaymentDetails };
@@ -97,17 +96,12 @@ export function InstaPayBox({
   seats,
   details,
   compact,
-  upload,
-  onUploaded,
 }: {
   number: string | null;
   seatPrice: number;
   seats?: number;
   details?: PaymentDetails;
   compact?: boolean;
-  /** بيانات صاحب الحجز لرفع صورة الإيصال من الموقع */
-  upload?: ReceiptTarget;
-  onUploaded?: () => void;
 }) {
   const count = details?.seats ?? seats;
   const amount = count ? count * seatPrice : null;
@@ -140,27 +134,6 @@ export function InstaPayBox({
           {details ? (
             <>
               <InstaPayOpenButton number={number} />
-              {upload ? (
-                <>
-                  <p className="mt-4 text-[15px] font-bold text-ink">بعد التحويل ارفع صورة إيصال إنستاباي هنا:</p>
-                  <div className="mt-2">
-                    <ReceiptUpload target={upload} onUploaded={onUploaded} />
-                  </div>
-                  <p className="mt-2 text-sm text-muted">
-                    أو{' '}
-                    <a
-                      href={whatsAppPaymentLink(number, seatPrice, details)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-bold text-[#188341] underline underline-offset-4"
-                    >
-                      أرسلها على واتساب
-                    </a>{' '}
-                    إن واجهتك مشكلة في الرفع.
-                  </p>
-                </>
-              ) : (
-                <>
               <p className="mt-3 text-[15px] font-bold text-ink">
                 بعد التحويل أرسل صورة إيصال إنستاباي على واتساب لنفس الرقم:
               </p>
@@ -177,14 +150,12 @@ export function InstaPayBox({
                 تفتح المحادثة برسالة جاهزة فيها اسمك والمبلغ — أرفق صورة الإيصال واضغط إرسال. بعد مراجعة التحويل يؤكد
                 المسؤول الدفع، ويتحول لون مقاعدك إلى الأخضر الغامق.
               </p>
-                </>
-              )}
             </>
           ) : (
             <ol className="mt-2 list-inside list-decimal text-sm text-muted">
               <li>سجّل الحجز أولًا.</li>
               <li>حوّل المبلغ على رقم إنستاباي.</li>
-              <li>ارفع صورة الإيصال من الموقع (يظهر لك زر الرفع بعد الحجز) ليؤكد المسؤول الدفع.</li>
+              <li>أرسل صورة الإيصال على واتساب لنفس الرقم (يظهر لك زر جاهز بعد الحجز).</li>
             </ol>
           )}
         </>

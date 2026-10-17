@@ -96,7 +96,7 @@ export function BookingForm({
       });
       requestId.current = newRequestId();
       setV(EMPTY);
-      onBooked({ ...r, phone: normalizePhone(v.phone) });
+      onBooked(r);
     } catch (err) {
       const code = toApiError(err).code;
       setServerError(errorMessage(err));
