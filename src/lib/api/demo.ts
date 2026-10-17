@@ -29,9 +29,11 @@ interface Db {
   bookings: DbBooking[];
   audit: AuditEntry[];
   session: AdminSession | null;
+  /** صور الإيصالات: booking_id → data URL */
+  receipts: Record<string, { image: string; uploaded_at: string }>;
 }
 
-const KEY = 'dasuki-bus-demo-v4';
+const KEY = 'dasuki-bus-demo-v5';
 export const DEMO_CREDENTIALS = { email: 'admin@demo.local', password: 'demo1234' };
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -43,6 +45,13 @@ function code(): string {
 }
 
 export const DEMO_INSTAPAY = '01065553930';
+
+/** صورة إيصال تجريبية (للمعاينة فقط) */
+const DEMO_RECEIPT =
+  'data:image/svg+xml;charset=utf-8,' +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="520" viewBox="0 0 360 520"><rect width="360" height="520" fill="#f6f2fb"/><rect x="20" y="20" width="320" height="480" rx="18" fill="#fff" stroke="#d8cbe8"/><text x="180" y="80" font-family="sans-serif" font-size="26" font-weight="700" fill="#4b1f7a" text-anchor="middle">InstaPay</text><text x="180" y="140" font-family="sans-serif" font-size="20" fill="#1c7c3c" text-anchor="middle">Transaction successful</text><text x="180" y="210" font-family="sans-serif" font-size="40" font-weight="700" fill="#222" text-anchor="middle">600 EGP</text><text x="180" y="270" font-family="sans-serif" font-size="16" fill="#555" text-anchor="middle">To: 01065553930</text><text x="180" y="300" font-family="sans-serif" font-size="16" fill="#555" text-anchor="middle">DEMO RECEIPT</text></svg>`,
+  );
 
 function seed(): Db {
   const now = Date.now();
@@ -109,9 +118,12 @@ function seed(): Db {
     created_at: iso(-40 + i * 3),
     updated_at: iso(-40 + i * 3),
     cancelled_at: i === 6 ? iso(-5) : null,
+    receipt_uploaded_at: !paid && i === 2 ? iso(-2) : null,
     client_request_id: null,
   }));
-  const db: Db = { points, trips, tripPoints, bookings, audit: [], session: null };
+  const receipts: Db['receipts'] = {};
+  for (const b of bookings) if (b.receipt_uploaded_at) receipts[b.id] = { image: DEMO_RECEIPT, uploaded_at: b.receipt_uploaded_at };
+  const db: Db = { points, trips, tripPoints, bookings, audit: [], session: null, receipts };
   db.trips.forEach((t) => recompute(db, t.id));
   return db;
 }
@@ -283,6 +295,7 @@ export function createDemoApi(): Api {
           pickup_point_name: pointName(b.pickup_point_id),
           created_at: b.created_at,
           is_paid: b.is_paid,
+          has_receipt: !!b.receipt_uploaded_at,
         }));
     },
 
@@ -342,6 +355,7 @@ export function createDemoApi(): Api {
         created_at: now,
         updated_at: now,
         cancelled_at: null,
+        receipt_uploaded_at: null,
         client_request_id: input.client_request_id,
       };
       db.bookings.push(b);
@@ -394,7 +408,24 @@ export function createDemoApi(): Api {
         created_at: b.created_at,
         max_seats: Math.min(t.max_seats_per_booking, b.seats + (t.capacity - t.booked_seats)),
         locked_reason: lockedReason(t, b),
+        receipt_uploaded_at: b.receipt_uploaded_at ?? null,
       };
+    },
+
+    async uploadMyReceipt(tripId, fullName, phone, image) {
+      await delay();
+      const b = findMine(tripId, fullName, phone);
+      if (trip(tripId).status === 'cancelled') throw new ApiError('TRIP_CANCELLED');
+      if (b.is_paid) throw new ApiError('ALREADY_PAID');
+      if (image.length > 620_000) throw new ApiError('RECEIPT_TOO_LARGE');
+      if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(image)) throw new ApiError('INVALID_RECEIPT');
+      const old = { ...b };
+      const now = new Date().toISOString();
+      (db.receipts ??= {})[b.id] = { image, uploaded_at: now };
+      b.receipt_uploaded_at = now;
+      audit('receipt', 'bookings', b.id, old, b);
+      save();
+      return now;
     },
 
     async updateMyBooking(tripId, fullName, phone, seats) {
@@ -533,7 +564,17 @@ export function createDemoApi(): Api {
       requireAdmin();
       return db.bookings
         .filter((b) => b.trip_id === tripId)
-        .map(({ client_request_id: _c, ...b }) => ({ ...b, pickup_point_name: pointName(b.pickup_point_id) }));
+        .map(({ client_request_id: _c, ...b }) => ({
+          ...b,
+          receipt_uploaded_at: b.receipt_uploaded_at ?? null,
+          pickup_point_name: pointName(b.pickup_point_id),
+        }));
+    },
+
+    async getReceipt(bookingId) {
+      await delay();
+      requireAdmin();
+      return db.receipts?.[bookingId] ?? null;
     },
 
     async updateBooking(id, patch) {

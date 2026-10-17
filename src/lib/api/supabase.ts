@@ -110,6 +110,12 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       await run(sb.rpc('cancel_my_booking', { p_trip_id: tripId, p_full_name: fullName, p_phone: phone }));
     },
 
+    async uploadMyReceipt(tripId, fullName, phone, image) {
+      return (await run(
+        sb.rpc('upload_my_receipt', { p_trip_id: tripId, p_full_name: fullName, p_phone: phone, p_image: image }),
+      )) as string;
+    },
+
     subscribeTrip(tripId, onChange) {
       // الزائر يشترك في صف الرحلة (booked_seats يتغير مع كل حجز/إلغاء).
       // المسؤول يستقبل أيضًا تغييرات جدول الحجوزات (RLS يمنعها عن الزوار).
@@ -190,7 +196,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
         sb
           .from('bookings')
           .select(
-            'id, booking_code, trip_id, full_name, seats, pickup_point_id, phone, notes, status, is_paid, paid_at, created_at, updated_at, cancelled_at, pickup_points(name)',
+            'id, booking_code, trip_id, full_name, seats, pickup_point_id, phone, notes, status, is_paid, paid_at, created_at, updated_at, cancelled_at, receipt_uploaded_at, pickup_points(name)',
           )
           .eq('trip_id', tripId)
           .order('created_at'),
@@ -204,6 +210,12 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       // .select() يضمن أن الصف تم تعديله فعلًا (RLS يعيد صفرًا لغير المسؤول)
       const rows = await run(sb.from('bookings').update(patch).eq('id', id).select('id'));
       if (!(rows as unknown[]).length) throw new ApiError('FORBIDDEN');
+    },
+
+    async getReceipt(bookingId) {
+      return (await run(
+        sb.from('booking_receipts').select('image, uploaded_at').eq('booking_id', bookingId).maybeSingle(),
+      )) as { image: string; uploaded_at: string } | null;
     },
 
     async listAudit(limit) {
