@@ -6,6 +6,7 @@ import { cleanName, isValidEgyptianPhone } from '../lib/validation';
 import { toWhatsAppNumber, whatsAppPaymentLink } from '../lib/whatsapp';
 import type { MyBooking, Trip } from '../lib/types';
 import { Button, Field, Input, cx, useToast } from './ui';
+import { InstaPayBox } from './Payment';
 
 const LOCK_TEXT: Record<string, string> = {
   BOOKING_CLOSED: 'انتهت فترة الحجز، ولم يعد التعديل متاحًا من الموقع. تواصل مع مسؤول الرحلة.',
@@ -199,6 +200,16 @@ export function ManageBooking({ trip, onChanged }: { trip: Trip; onChanged: () =
                 </div>
                 <span className="text-sm text-muted">الحد الأقصى المتاح لك الآن: {max}</span>
               </div>
+              {!mine.is_paid && !changed && trip.instapay_number && (
+                <div className="mt-4">
+                  <InstaPayBox
+                    compact
+                    number={trip.instapay_number}
+                    seatPrice={trip.seat_price}
+                    details={{ name: mine.full_name, seats: mine.seats, pickupPoint: mine.pickup_point_name }}
+                  />
+                </div>
+              )}
               {changed && (
                 <p className="mt-2 text-[15px]">
                   المبلغ بعد التعديل: <b className="tabular-nums">{formatMoney(seats * trip.seat_price)}</b>

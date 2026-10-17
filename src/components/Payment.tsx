@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { formatMoney, seatsWord } from '../lib/format';
 import { cx } from './ui';
 import { whatsAppPaymentLink, type PaymentDetails } from '../lib/whatsapp';
+import { currentMobileOS, instaPayAppLink } from '../lib/instapay';
 
 export { whatsAppPaymentLink };
 export type { PaymentDetails };
@@ -25,6 +26,54 @@ export function CopyButton({ text, label, className }: { text: string; label: st
     >
       {done ? 'تم النسخ' : label}
     </button>
+  );
+}
+
+/**
+ * زر الدفع على الموبايل: ينسخ رقم إنستاباي ثم يفتح التطبيق مباشرة
+ * (أندرويد: التطبيق نفسه أو صفحته على Google Play — آيفون: صفحته على App Store بزر «فتح»).
+ * على الكمبيوتر يكتفي بالنسخ.
+ */
+export function InstaPayOpenButton({ number }: { number: string }) {
+  const os = currentMobileOS();
+  const link = instaPayAppLink(os);
+  const [copied, setCopied] = useState<boolean | null>(null);
+
+  if (!link) return <CopyButton text={number} label="نسخ الرقم" />;
+
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        data-testid="instapay-open"
+        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#4b1f7a] px-4 font-bold text-white hover:bg-[#3c1862]"
+        onClick={async () => {
+          let ok = false;
+          try {
+            await navigator.clipboard.writeText(number);
+            ok = true;
+          } catch {
+            /* بعض المتصفحات ترفض الحافظة — الرقم ظاهر ويمكن نسخه يدويًا */
+          }
+          setCopied(ok);
+          // مهلة قصيرة ليرى المستخدم تأكيد النسخ قبل الانتقال للتطبيق
+          setTimeout(() => {
+            window.location.href = link;
+          }, 350);
+        }}
+      >
+        انسخ الرقم وافتح إنستاباي
+      </button>
+      <p role="status" className="mt-1.5 text-sm text-muted">
+        {copied === true
+          ? 'تم نسخ الرقم ✓ — الصقه في خانة رقم الموبايل داخل إنستاباي واكتب المبلغ.'
+          : copied === false
+            ? `انسخ الرقم يدويًا: ${number}`
+            : os === 'ios'
+              ? 'ينسخ الرقم ثم يفتح صفحة إنستاباي على App Store — اضغط «فتح».'
+              : 'ينسخ الرقم ثم يفتح تطبيق إنستاباي مباشرة.'}
+      </p>
+    </div>
   );
 }
 
@@ -80,10 +129,11 @@ export function InstaPayBox({
                 {number}
               </b>
             </p>
-            <CopyButton text={number} label="نسخ الرقم" />
+            {!details && <CopyButton text={number} label="نسخ الرقم" />}
           </div>
           {details ? (
             <>
+              <InstaPayOpenButton number={number} />
               <p className="mt-3 text-[15px] font-bold text-ink">
                 بعد التحويل أرسل صورة إيصال إنستاباي على واتساب لنفس الرقم:
               </p>
