@@ -4,6 +4,7 @@ import { resetDemoData } from '../lib/api/demo';
 import { bookingWindow, formatDateTime, formatMoney, formatTime, formatTripDate } from '../lib/format';
 import type { Trip } from '../lib/types';
 import { Badge } from './ui';
+import { BUS_PHOTO } from './busPhoto';
 
 export function DemoBanner() {
   if (api.mode !== 'demo') return null;
@@ -23,10 +24,11 @@ export function DemoBanner() {
   );
 }
 
-export function SiteHeader({ children, compact }: { children?: ReactNode; compact?: boolean }) {
+export function SiteHeader({ children, compact, top }: { children?: ReactNode; compact?: boolean; top?: ReactNode }) {
   return (
     <header className="pattern-stars text-white">
       <div className={compact ? 'mx-auto max-w-6xl px-4 py-5' : 'mx-auto max-w-6xl px-4 pt-8 pb-14 sm:pt-12 sm:pb-16'}>
+        {top}
         <a href="#/" className="inline-block">
           <h1 className={compact ? 'text-xl font-extrabold' : 'text-[30px] leading-tight font-extrabold sm:text-5xl'}>
             رحلة سيدي إبراهيم الدسوقي <span aria-hidden="true">🚌</span>
@@ -35,6 +37,22 @@ export function SiteHeader({ children, compact }: { children?: ReactNode; compac
         {children}
       </div>
     </header>
+  );
+}
+
+/** صورة أتوبيس الرحلة أعلى الصفحة العامة */
+export function BusPhoto() {
+  return (
+    <figure className="mx-auto mb-6 w-full max-w-[300px] sm:mb-8 sm:max-w-[340px]">
+      <img
+        src={BUS_PHOTO}
+        alt="أتوبيس الرحلة — لوحة رقم رهج ٦٥٩"
+        width={800}
+        height={856}
+        className="aspect-[800/856] w-full rounded-2xl border border-white/20 object-cover shadow-lg"
+      />
+      <figcaption className="mt-2.5 text-center text-lg font-extrabold">أتوبيس الرحلة رهج - ٦٥٩</figcaption>
+    </figure>
   );
 }
 
