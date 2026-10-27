@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { api } from '../lib/api';
 import { resetDemoData } from '../lib/api/demo';
-import { bookingWindow, formatDateTime, formatMoney, formatTime, formatTripDate } from '../lib/format';
+import { bookingWindow, formatDateTime, formatTime, formatTripDate } from '../lib/format';
 import type { Trip } from '../lib/types';
 import { Badge } from './ui';
 import { BUS_PHOTO } from './busPhoto';
@@ -79,9 +79,6 @@ export function TripFacts({ trip }: { trip: Trip }) {
           التحرك {formatTime(trip.departure_time)} من {trip.departure_point}
           <span className="mx-2 opacity-60">←</span>
           {trip.destination}
-        </p>
-        <p className="mt-2 text-[15px] font-bold text-white">
-          سعر التذكرة {formatMoney(trip.seat_price)} للمقعد الواحد
         </p>
         {trip.notes && <p className="mt-1 text-[15px] text-white">{trip.notes}</p>}
       </div>
