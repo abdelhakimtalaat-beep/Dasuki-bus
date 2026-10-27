@@ -6,7 +6,7 @@ import { ManageBooking } from '../components/ManageBooking';
 import { BusMap, OccupancySummary } from '../components/BusOccupancy';
 import { PublicPassengerList, SuccessModal } from '../components/PublicParts';
 import { Card, ErrorBox, Spinner, cx, useToast } from '../components/ui';
-import { DemoBanner, SiteHeader, TripFacts } from '../components/Layout';
+import { BusPhoto, DemoBanner, SiteHeader, TripFacts } from '../components/Layout';
 import { errorMessage } from '../lib/errors';
 import { formatShortDate, seatsWord, todayInCairo } from '../lib/format';
 import { pickDefaultTrip, useAsync } from '../lib/hooks';
@@ -35,7 +35,7 @@ export function PublicPage() {
   return (
     <div className="min-h-dvh">
       <DemoBanner />
-      <SiteHeader>
+      <SiteHeader top={<BusPhoto />}>
         {visible.length > 1 && (
           <nav aria-label="اختيار الرحلة" className="mt-6 flex gap-2 overflow-x-auto pb-1">
             {visible.map((t) => (
