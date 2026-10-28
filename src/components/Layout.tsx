@@ -46,12 +46,12 @@ export function BusPhoto() {
     <figure className="mx-auto mb-6 w-full max-w-[300px] sm:mb-8 sm:max-w-[340px]">
       <img
         src={BUS_PHOTO}
-        alt="أتوبيس الرحلة — لوحة رقم رهج ٦٥٩"
+        alt="أتوبيس الرحلة — لوحة رقم صهج ٩٢٧"
         width={800}
-        height={856}
-        className="aspect-[800/856] w-full rounded-2xl border border-white/20 object-cover shadow-lg"
+        height={1033}
+        className="aspect-[800/1033] w-full rounded-2xl border border-white/20 object-cover shadow-lg"
       />
-      <figcaption className="mt-2.5 text-center text-lg font-extrabold">أتوبيس الرحلة رهج - ٦٥٩</figcaption>
+      <figcaption className="mt-2.5 text-center text-lg font-extrabold">أتوبيس الرحلة صهج - ٩٢٧</figcaption>
     </figure>
   );
 }
