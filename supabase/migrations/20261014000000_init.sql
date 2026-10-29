@@ -952,3 +952,56 @@ begin
     alter publication supabase_realtime add table public.trips, public.bookings, public.pickup_points;
   end if;
 end $$;
+
+-- =====================================================================
+-- (مُدمج من update-6-hide-trips.sql) إخفاء الرحلات عن الحاجزين
+-- =====================================================================
+alter table public.trips add column if not exists is_hidden boolean not null default false;
+
+-- الزائر يقرأ الرحلات الظاهرة فقط، والمسؤول يقرأ الكل
+drop policy if exists trips_read on public.trips;
+create policy trips_read on public.trips
+  for select to anon, authenticated using (not is_hidden or public.is_admin());
+
+-- منع الحجز في رحلة مخفية (إلا من المسؤول)
+create or replace function public.bookings_hidden_trip_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if exists (select 1 from public.trips t where t.id = new.trip_id and t.is_hidden)
+     and not public.is_admin() then
+    raise exception 'TRIP_NOT_FOUND';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists bookings_hidden_trip_guard on public.bookings;
+create trigger bookings_hidden_trip_guard
+  before insert on public.bookings
+  for each row execute function public.bookings_hidden_trip_guard();
+
+-- إخفاء/إظهار رحلة من لوحة التحكم
+create or replace function public.admin_set_trip_hidden(p_id uuid, p_hidden boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'FORBIDDEN' using errcode = '42501';
+  end if;
+  update public.trips set is_hidden = coalesce(p_hidden, false) where id = p_id;
+  if not found then
+    raise exception 'TRIP_NOT_FOUND';
+  end if;
+end;
+$$;
+
+revoke execute on function public.bookings_hidden_trip_guard() from public, anon, authenticated;
+revoke execute on function public.admin_set_trip_hidden(uuid, boolean) from public, anon;
+grant execute on function public.admin_set_trip_hidden(uuid, boolean) to authenticated;

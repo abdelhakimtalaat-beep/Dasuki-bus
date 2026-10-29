@@ -185,6 +185,10 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       await run(sb.rpc('admin_set_trip_status', { p_id: id, p_status: status }));
     },
 
+    async setTripHidden(id, hidden) {
+      await run(sb.rpc('admin_set_trip_hidden', { p_id: id, p_hidden: hidden }));
+    },
+
     async listBookings(tripId) {
       const rows = await run(
         sb

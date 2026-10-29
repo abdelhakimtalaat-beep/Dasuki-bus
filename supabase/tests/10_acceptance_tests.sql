@@ -310,13 +310,13 @@ select t.ok(not (select is_paid from public.bookings where full_name = 'حجز �
 
 -- السعر ورقم إنستاباي يُحفظان مع الرحلة
 create temp table pr as select public.admin_save_trip(null, jsonb_build_object(
-    'trip_date', '2026-10-28', 'departure_time', '06:00', 'departure_point', 'مفارق الـ100 بالشروق',
+    'trip_date', (current_date + 5)::text, 'departure_time', '06:00', 'departure_point', 'مفارق الـ100 بالشروق',
     'seat_price', 300, 'instapay_number', '+20 106 555 3930',
-    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', '2026-10-25 23:59+03'),
+    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', now() + interval '3 days'),
     array['11111111-0000-0000-0000-000000000001']::uuid[]) as id;
 select t.ok((select seat_price = 300 and instapay_number = '01065553930' from public.trips where id = (select id from pr)), 'سعر المقعد ورقم إنستاباي محفوظان (مع توحيد الرقم)');
 select t.expect_error($q$select public.admin_save_trip(null, jsonb_build_object(
-    'trip_date', '2026-10-28', 'departure_time', '06:00', 'departure_point', 'x1', 'instapay_number', '0123',
+    'trip_date', (current_date + 5)::text, 'departure_time', '06:00', 'departure_point', 'x1', 'instapay_number', '0123',
     'booking_opens_at', now(), 'booking_closes_at', now() + interval '1 day'),
     array['11111111-0000-0000-0000-000000000001']::uuid[])$q$, 'instapay_number_check', 'رقم إنستاباي غير صالح مرفوض');
 
@@ -325,31 +325,31 @@ select t.expect_error($q$select public.admin_save_trip(null, jsonb_build_object(
 -- =====================================================================
 select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
 create temp table rt as select public.admin_save_trip(null, jsonb_build_object(
-    'trip_date', '2026-10-28', 'departure_time', '07:30', 'departure_point', 'الشروق',
+    'trip_date', (current_date + 5)::text, 'departure_time', '07:30', 'departure_point', 'الشروق',
     'announcements', E'الحجز للرجال فقط.\nمسؤول الباص: محمد عبد الله ربيع.',
     'route_stops', E'الشروق\nالطريق الإقليمي\nسيدي إبراهيم الدسوقي',
     'route_map_url', 'https://maps.app.goo.gl/Z9rYgAv3Hp94hX7t5',
     'route_embed_url', 'https://maps.google.com/maps?saddr=30.13,31.60&daddr=31.12,30.64&output=embed',
-    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', '2026-10-25 23:59+03'),
+    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', now() + interval '3 days'),
     array['11111111-0000-0000-0000-000000000001']::uuid[]) as id;
 grant select on rt to public;
 select t.ok((select route_stops like 'الشروق%' and announcements like 'الحجز للرجال فقط.%'
                and route_map_url like 'https://maps.app.goo.gl/%' and route_embed_url like '%output=embed'
              from public.trips where id = (select id from rt)), 'التنبيهات والمسار والخريطة تُحفظ مع الرحلة');
 select public.admin_save_trip((select id from rt), jsonb_build_object(
-    'trip_date', '2026-10-28', 'departure_time', '07:30', 'departure_point', 'الشروق',
-    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', '2026-10-25 23:59+03'),
+    'trip_date', (current_date + 5)::text, 'departure_time', '07:30', 'departure_point', 'الشروق',
+    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', now() + interval '3 days'),
     array['11111111-0000-0000-0000-000000000001']::uuid[]);
 select t.ok((select route_stops is not null from public.trips where id = (select id from rt)), 'تعديل الرحلة بدون الحقول لا يمسح المسار');
 select t.expect_error($q$select public.admin_save_trip((select id from rt), jsonb_build_object(
-    'trip_date', '2026-10-28', 'departure_time', '07:30', 'departure_point', 'الشروق',
+    'trip_date', (current_date + 5)::text, 'departure_time', '07:30', 'departure_point', 'الشروق',
     'route_embed_url', 'https://evil.example.com/maps',
-    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', '2026-10-25 23:59+03'),
+    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', now() + interval '3 days'),
     array['11111111-0000-0000-0000-000000000001']::uuid[])$q$, 'route_embed_url_check', 'رابط خريطة مضمّنة من غير جوجل مرفوض');
 select t.expect_error($q$select public.admin_save_trip((select id from rt), jsonb_build_object(
-    'trip_date', '2026-10-28', 'departure_time', '07:30', 'departure_point', 'الشروق',
+    'trip_date', (current_date + 5)::text, 'departure_time', '07:30', 'departure_point', 'الشروق',
     'route_map_url', 'javascript:alert(1)',
-    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', '2026-10-25 23:59+03'),
+    'booking_opens_at', now() - interval '1 hour', 'booking_closes_at', now() + interval '3 days'),
     array['11111111-0000-0000-0000-000000000001']::uuid[])$q$, 'route_map_url_check', 'رابط خريطة غير آمن مرفوض');
 select t.as_anon();
 select t.ok((select route_stops is not null from public.trips where id = (select id from rt)), 'الزائر يرى المسار والتنبيهات');
@@ -397,6 +397,30 @@ select t.expect_error($q$select public.update_my_booking((select id from rt), '�
 select t.expect_error($q$select * from public.find_my_booking_row((select id from rt), 'أحمد إبراهيم السيد', '01099990001')$q$, 'permission denied', 'الدالة الداخلية غير متاحة للزائر');
 reset role;
 select t.ok((select count(*) from public.audit_log where entity = 'bookings' and action = 'cancel' and actor_id is null) >= 1, 'تعديلات الراكب مسجلة في سجل العمليات');
+
+-- =====================================================================
+-- 13هـ) إخفاء رحلة عن الحاجزين
+-- =====================================================================
+select t.as_user('bbbbbbbb-0000-0000-0000-000000000002');
+select t.expect_error($q$select public.admin_set_trip_hidden((select id from rt), true)$q$, 'FORBIDDEN', 'غير المسؤول لا يُخفي رحلة');
+select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
+select public.admin_set_trip_status((select id from rt), 'open');
+select public.admin_set_trip_hidden((select id from rt), true);
+select t.ok((select is_hidden from public.trips where id = (select id from rt)), 'المسؤول يُخفي الرحلة ويراها');
+select t.as_anon();
+select t.ok(not exists (select 1 from public.trips where id = (select id from rt)), 'الزائر لا يرى الرحلة المخفية');
+reset role;
+create temp table hid as select id from public.trips where is_hidden;
+grant select on hid to anon, authenticated;
+select t.as_anon();
+select t.expect_error($q$select * from public.create_booking((select id from hid), 'حاجز رحلة مخفية', 1, '11111111-0000-0000-0000-000000000001', '01099990077')$q$, 'TRIP_NOT_FOUND', 'لا حجز في رحلة مخفية');
+select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
+select * from public.create_booking((select id from hid), 'حجز المسؤول في المخفية', 1, '11111111-0000-0000-0000-000000000001', '01099990078');
+select t.ok(true, 'المسؤول يستطيع الإضافة في رحلة مخفية');
+select public.admin_set_trip_hidden((select id from hid), false);
+select t.as_anon();
+select t.ok(exists (select 1 from public.trips where id = (select id from hid)), 'بعد الإظهار يراها الزائر');
+reset role;
 
 -- =====================================================================
 -- 14) الثبات النهائي: المقاعد المخزنة = مجموع الحجوزات المؤكدة لكل رحلة

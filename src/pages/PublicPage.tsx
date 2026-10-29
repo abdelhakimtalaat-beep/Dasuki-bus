@@ -6,7 +6,7 @@ import { ManageBooking } from '../components/ManageBooking';
 import { BusMap, OccupancySummary } from '../components/BusOccupancy';
 import { PublicPassengerList, SuccessModal } from '../components/PublicParts';
 import { Card, ErrorBox, Spinner, cx, useToast } from '../components/ui';
-import { BusPhoto, DemoBanner, SiteHeader, TripFacts } from '../components/Layout';
+import { DemoBanner, SiteHeader, TripFacts } from '../components/Layout';
 import { errorMessage } from '../lib/errors';
 import { formatShortDate, seatsWord, todayInCairo } from '../lib/format';
 import { pickDefaultTrip, useAsync } from '../lib/hooks';
@@ -16,12 +16,12 @@ export function PublicPage() {
   const trips = useAsync(() => api.listTrips(), []);
   const [tripId, setTripId] = useState<string | null>(null);
 
-  // الزائر يرى الرحلات القادمة فقط (السابقة متاحة للمسؤول)
+  // الزائر يرى الرحلات الجديدة فقط: القادمة وغير المخفية (السابقة والمخفية متاحة للمسؤول فقط)
   const visible = useMemo(() => {
-    const all = trips.data ?? [];
     const today = todayInCairo();
-    const upcoming = all.filter((t) => t.trip_date >= today).sort((a, b) => a.trip_date.localeCompare(b.trip_date));
-    return upcoming.length ? upcoming : all.slice(0, 1);
+    return (trips.data ?? [])
+      .filter((t) => !t.is_hidden && t.trip_date >= today)
+      .sort((a, b) => a.trip_date.localeCompare(b.trip_date));
   }, [trips.data]);
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export function PublicPage() {
   return (
     <div className="min-h-dvh">
       <DemoBanner />
-      <SiteHeader top={<BusPhoto />}>
+      <SiteHeader>
         {visible.length > 1 && (
           <nav aria-label="اختيار الرحلة" className="mt-6 flex gap-2 overflow-x-auto pb-1">
             {visible.map((t) => (
@@ -69,7 +69,7 @@ export function PublicPage() {
         ) : !trip ? (
           <Card className="p-8 text-center">
             <p className="text-lg font-extrabold">لا توجد رحلة متاحة حاليًا</p>
-            <p className="mt-1 text-muted">سيعلن مسؤول الرحلة عن موعد الرحلة القادمة قريبًا.</p>
+            <p className="mt-1 text-muted">سيُعلَن عن موعد الرحلة القادمة قريبًا.</p>
           </Card>
         ) : (
           <TripView key={trip.id} trip={trip} onTripChanged={onTripChanged} />

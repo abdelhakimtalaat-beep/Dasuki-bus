@@ -10,13 +10,15 @@ export interface PaymentDetails {
   name: string;
   seats: number;
   pickupPoint: string;
+  /** اسم الرحلة كما يكتبه المسؤول */
+  tripTitle?: string;
 }
 
 /** رابط واتساب برسالة جاهزة؛ الراكب يرفق صورة إيصال إنستاباي في المحادثة. */
 export function whatsAppPaymentLink(number: string, seatPrice: number, d: PaymentDetails): string {
   const text = [
     'السلام عليكم،',
-    'مرفق صورة تحويل إنستاباي لحجز رحلة سيدي إبراهيم الدسوقي.',
+    `مرفق صورة تحويل إنستاباي لحجز ${d.tripTitle?.trim() || 'الرحلة'}.`,
     `الاسم: ${d.name}`,
     `عدد المقاعد: ${d.seats}`,
     `نقطة التجمع: ${d.pickupPoint}`,

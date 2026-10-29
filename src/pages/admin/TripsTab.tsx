@@ -120,6 +120,19 @@ export function TripsTab({ trips, onChanged }: { trips: Trip[]; onChanged: () =>
     setEditor({ id: t.id, draft: draftFromTrip(t, pts.map((p) => p.id)) });
   }
 
+  async function toggleHidden(t: Trip) {
+    setBusyId(t.id);
+    try {
+      await api.setTripHidden(t.id, !t.is_hidden);
+      toast(t.is_hidden ? 'أصبحت الرحلة ظاهرة للحاجزين.' : 'تم إخفاء الرحلة عن الحاجزين.', 'success');
+      onChanged();
+    } catch (e) {
+      toast(errorMessage(e), 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function setStatus(t: Trip, status: TripStatus, msg: string) {
     setBusyId(t.id);
     try {
@@ -138,7 +151,9 @@ export function TripsTab({ trips, onChanged }: { trips: Trip[]; onChanged: () =>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-extrabold">الرحلات</h2>
-          <p className="text-muted">لكل رحلة حجوزاتها المستقلة. لا تُنشأ أي رحلة تلقائيًا.</p>
+          <p className="text-muted">
+            لكل رحلة حجوزاتها المستقلة. صفحة الحجز تعرض الرحلات القادمة غير المخفية فقط، وتختفي الرحلة منها تلقائيًا بعد موعدها.
+          </p>
         </div>
         <Button onClick={() => void openNew()}>إنشاء رحلة جديدة</Button>
       </div>
@@ -150,14 +165,20 @@ export function TripsTab({ trips, onChanged }: { trips: Trip[]; onChanged: () =>
           {sorted.map((t) => {
             const past = t.trip_date < todayInCairo();
             return (
-              <Card key={t.id} className={cx('p-4 sm:p-5', past && 'opacity-80')}>
+              <Card key={t.id} className={cx('p-4 sm:p-5', (past || t.is_hidden) && 'opacity-80')}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-extrabold">{formatTripDate(t.trip_date)}</h3>
                       <TripStatusBadge trip={t} />
                       {past && <span className="text-sm text-muted">رحلة سابقة</span>}
+                      {t.is_hidden ? (
+                        <span className="rounded-full bg-ink/10 px-2.5 py-0.5 text-[13px] font-bold text-ink">مخفية عن الحاجزين</span>
+                      ) : (
+                        !past && <span className="rounded-full bg-pine-50 px-2.5 py-0.5 text-[13px] font-bold text-pine-800">ظاهرة للحاجزين</span>
+                      )}
                     </div>
+                    <p className="mt-0.5 font-bold">{t.title}</p>
                     <p className="mt-1 text-[15px] text-muted">
                       التحرك {formatTime(t.departure_time)} من {t.departure_point} — {formatMoney(t.seat_price)} للمقعد — الحجز من {formatDateTime(t.booking_opens_at)} حتى{' '}
                       {formatDateTime(t.booking_closes_at)}
@@ -171,6 +192,9 @@ export function TripsTab({ trips, onChanged }: { trips: Trip[]; onChanged: () =>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button variant="secondary" className="min-h-9 text-sm" onClick={() => void openEdit(t)}>
                     تعديل
+                  </Button>
+                  <Button variant="ghost" className="min-h-9 text-sm" loading={busyId === t.id} onClick={() => void toggleHidden(t)}>
+                    {t.is_hidden ? 'إظهار للحاجزين' : 'إخفاء عن الحاجزين'}
                   </Button>
                   {(t.status === 'open' || t.status === 'full') && (
                     <Button variant="ghost" className="min-h-9 text-sm" loading={busyId === t.id} onClick={() => void setStatus(t, 'closed', 'تم إغلاق الحجز.')}>

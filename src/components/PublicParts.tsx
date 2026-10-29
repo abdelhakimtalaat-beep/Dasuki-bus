@@ -37,7 +37,7 @@ export function SuccessModal({
         <InstaPayBox
           number={trip.instapay_number}
           seatPrice={trip.seat_price}
-          details={{ name: result.full_name, seats: result.seats, pickupPoint: result.pickup_point_name }}
+          details={{ name: result.full_name, seats: result.seats, pickupPoint: result.pickup_point_name, tripTitle: trip.title }}
           compact
         />
         <Announcements trip={trip} compact />

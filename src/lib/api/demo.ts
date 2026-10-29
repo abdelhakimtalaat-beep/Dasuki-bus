@@ -290,6 +290,7 @@ export function createDemoApi(): Api {
     async createBooking(input) {
       await delay();
       const t = trip(input.trip_id);
+      if (t.is_hidden && !db.session?.isAdmin) throw new ApiError('TRIP_NOT_FOUND');
       const existing = db.bookings.find(
         (b) => b.trip_id === t.id && b.client_request_id === input.client_request_id,
       );
@@ -525,6 +526,16 @@ export function createDemoApi(): Api {
       const old = { ...t };
       t.status = status;
       recompute(db, id);
+      audit('update', 'trips', id, old, t);
+      save();
+    },
+
+    async setTripHidden(id, hidden) {
+      await delay();
+      requireAdmin();
+      const t = trip(id);
+      const old = { ...t };
+      t.is_hidden = hidden;
       audit('update', 'trips', id, old, t);
       save();
     },

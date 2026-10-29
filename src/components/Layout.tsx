@@ -4,7 +4,6 @@ import { resetDemoData } from '../lib/api/demo';
 import { bookingWindow, formatDateTime, formatTime, formatTripDate } from '../lib/format';
 import type { Trip } from '../lib/types';
 import { Badge } from './ui';
-import { BUS_PHOTO } from './busPhoto';
 
 export function DemoBanner() {
   if (api.mode !== 'demo') return null;
@@ -24,35 +23,18 @@ export function DemoBanner() {
   );
 }
 
-export function SiteHeader({ children, compact, top }: { children?: ReactNode; compact?: boolean; top?: ReactNode }) {
+export function SiteHeader({ children, compact }: { children?: ReactNode; compact?: boolean }) {
   return (
     <header className="pattern-stars text-white">
       <div className={compact ? 'mx-auto max-w-6xl px-4 py-5' : 'mx-auto max-w-6xl px-4 pt-8 pb-14 sm:pt-12 sm:pb-16'}>
-        {top}
         <a href="#/" className="inline-block">
           <h1 className={compact ? 'text-xl font-extrabold' : 'text-[30px] leading-tight font-extrabold sm:text-5xl'}>
-            رحلة سيدي إبراهيم الدسوقي <span aria-hidden="true">🚌</span>
+            باص الشروق والعبور <span aria-hidden="true">🚌</span>
           </h1>
         </a>
         {children}
       </div>
     </header>
-  );
-}
-
-/** صورة أتوبيس الرحلة أعلى الصفحة العامة */
-export function BusPhoto() {
-  return (
-    <figure className="mx-auto mb-6 w-full max-w-[300px] sm:mb-8 sm:max-w-[340px]">
-      <img
-        src={BUS_PHOTO}
-        alt="أتوبيس الرحلة — لوحة رقم صهج ٩٢٧"
-        width={800}
-        height={1033}
-        className="aspect-[800/1033] w-full rounded-2xl border border-white/20 object-cover shadow-lg"
-      />
-      <figcaption className="mt-2.5 text-center text-lg font-extrabold">أتوبيس الرحلة صهج - ٩٢٧</figcaption>
-    </figure>
   );
 }
 
@@ -74,7 +56,8 @@ export function TripFacts({ trip }: { trip: Trip }) {
   return (
     <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-white/15 bg-pine-950/35 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <div>
-        <p className="text-lg font-extrabold sm:text-xl">{formatTripDate(trip.trip_date)}</p>
+        <p className="text-lg font-extrabold sm:text-xl">{trip.title}</p>
+        <p className="mt-0.5 font-bold text-white">{formatTripDate(trip.trip_date)}</p>
         <p className="mt-0.5 text-pine-100">
           التحرك {formatTime(trip.departure_time)} من {trip.departure_point}
           <span className="mx-2 opacity-60">←</span>

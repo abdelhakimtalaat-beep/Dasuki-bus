@@ -158,7 +158,7 @@ export function ManageBooking({ trip, onChanged }: { trip: Trip; onChanged: () =
                 <a
                   className="mt-2 inline-flex min-h-10 items-center rounded-lg bg-[#1f9e4f] px-4 font-bold text-white hover:bg-[#188341]"
                   href={`https://wa.me/${toWhatsAppNumber(trip.instapay_number)}?text=${encodeURIComponent(
-                    `السلام عليكم، أريد تعديل حجزي في رحلة سيدي إبراهيم الدسوقي.\nالاسم: ${mine.full_name}\nعدد المقاعد الحالي: ${mine.seats}`,
+                    `السلام عليكم، أريد تعديل حجزي في ${trip.title}.\nالاسم: ${mine.full_name}\nعدد المقاعد الحالي: ${mine.seats}`,
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -206,7 +206,7 @@ export function ManageBooking({ trip, onChanged }: { trip: Trip; onChanged: () =
                     compact
                     number={trip.instapay_number}
                     seatPrice={trip.seat_price}
-                    details={{ name: mine.full_name, seats: mine.seats, pickupPoint: mine.pickup_point_name }}
+                    details={{ name: mine.full_name, seats: mine.seats, pickupPoint: mine.pickup_point_name, tripTitle: trip.title }}
                   />
                 </div>
               )}
@@ -249,6 +249,7 @@ export function ManageBooking({ trip, onChanged }: { trip: Trip; onChanged: () =
                       name: mine.full_name,
                       seats,
                       pickupPoint: mine.pickup_point_name,
+                      tripTitle: trip.title,
                     })}
                     target="_blank"
                     rel="noopener noreferrer"

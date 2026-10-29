@@ -45,6 +45,8 @@ export interface Api {
   savePickupPoint(p: PickupPointInput): Promise<void>;
   saveTrip(id: string | null, data: TripInput, pointIds: string[]): Promise<string>;
   setTripStatus(id: string, status: TripStatus): Promise<void>;
+  /** إخفاء الرحلة عن الحاجزين أو إظهارها */
+  setTripHidden(id: string, hidden: boolean): Promise<void>;
   listBookings(tripId: string): Promise<Booking[]>;
   updateBooking(id: string, patch: BookingPatch): Promise<void>;
   listAudit(limit: number): Promise<AuditEntry[]>;

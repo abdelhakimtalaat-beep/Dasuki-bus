@@ -74,7 +74,7 @@ function AdminShell({ tab, email, onSignOut }: { tab: TabId; email: string; onSi
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div>
             <a href="#/" className="text-lg font-extrabold sm:text-xl">
-              لوحة تحكم رحلة الدسوقي
+              لوحة تحكم باص الشروق والعبور
             </a>
             <p className="text-sm text-pine-100">{email}</p>
           </div>
@@ -158,7 +158,7 @@ export function TripSelect({
     <Select value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
       {sorted.map((t) => (
         <option key={t.id} value={t.id}>
-          {formatTripDate(t.trip_date)} — {STATUS_LABEL[t.status]} ({t.booked_seats}/{t.capacity})
+          {formatTripDate(t.trip_date)} — {STATUS_LABEL[t.status]} ({t.booked_seats}/{t.capacity}){t.is_hidden ? ' — مخفية' : ''}
         </option>
       ))}
     </Select>

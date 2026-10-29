@@ -21,6 +21,8 @@ export interface Trip {
   route_stops: string | null;
   route_map_url: string | null;
   route_embed_url: string | null;
+  /** مخفية عن الحاجزين (يراها المسؤول فقط) */
+  is_hidden?: boolean;
   created_at: string;
   updated_at: string;
 }
