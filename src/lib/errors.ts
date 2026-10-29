@@ -38,6 +38,10 @@ const KNOWN_CODES = [
   'BOOKING_NOT_FOUND',
   'PAID_LOCKED',
   'instapay_number_check',
+  'INVALID_APP_NAME',
+  'INVALID_BUS_NUMBER',
+  'PHOTO_TOO_LARGE',
+  'INVALID_PHOTO',
 ] as const;
 
 /** يحوّل أي خطأ (من Supabase أو الشبكة) إلى ApiError برمز معروف. */
@@ -101,6 +105,14 @@ export function errorMessage(err: unknown): string {
       return 'لم نجد حجزًا بهذا الاسم ورقم الهاتف. اكتبهما كما سجلتهما وقت الحجز.';
     case 'PAID_LOCKED':
       return 'حجزك مؤكد الدفع، لذا يتم تعديله عن طريق مسؤول الرحلة.';
+    case 'INVALID_APP_NAME':
+      return 'اسم التطبيق يجب أن يكون من 2 إلى 80 حرفًا.';
+    case 'INVALID_BUS_NUMBER':
+      return 'رقم الأتوبيس طويل جدًا (40 حرفًا كحد أقصى).';
+    case 'PHOTO_TOO_LARGE':
+      return 'حجم الصورة كبير جدًا. جرّب صورة أخرى.';
+    case 'INVALID_PHOTO':
+      return 'الملف المختار ليس صورة. اختر صورة JPG أو PNG.';
     case 'INVALID_PHONE':
       return 'رقم الهاتف غير صحيح. اكتب رقمًا مصريًا من 11 رقمًا يبدأ بـ 010 أو 011 أو 012 أو 015.';
     case 'INVALID_NAME':

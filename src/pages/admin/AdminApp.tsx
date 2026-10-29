@@ -12,6 +12,8 @@ import { TripsTab } from './TripsTab';
 import { PointsTab } from './PointsTab';
 import { ReportsTab, PrintView } from './ReportsTab';
 import { AuditTab } from './AuditTab';
+import { SettingsTab } from './SettingsTab';
+import { useAppName } from '../../lib/appSettings';
 
 const TABS = [
   { id: 'bookings', label: 'الحجوزات' },
@@ -19,6 +21,7 @@ const TABS = [
   { id: 'points', label: 'نقاط التجمع' },
   { id: 'reports', label: 'التقارير' },
   { id: 'audit', label: 'سجل العمليات' },
+  { id: 'settings', label: 'الإعدادات' },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
@@ -57,6 +60,7 @@ export function AdminApp({ route }: { route: string }) {
 }
 
 function AdminShell({ tab, email, onSignOut }: { tab: TabId; email: string; onSignOut: () => void }) {
+  const appName = useAppName();
   const trips = useAsync(() => api.listTrips(), []);
   const [tripId, setTripId] = useState<string | null>(null);
   useEffect(() => {
@@ -74,7 +78,7 @@ function AdminShell({ tab, email, onSignOut }: { tab: TabId; email: string; onSi
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div>
             <a href="#/" className="text-lg font-extrabold sm:text-xl">
-              لوحة تحكم باص الشروق والعبور
+              لوحة تحكم {appName}
             </a>
             <p className="text-sm text-pine-100">{email}</p>
           </div>
@@ -127,6 +131,8 @@ function AdminShell({ tab, email, onSignOut }: { tab: TabId; email: string; onSi
           <PointsTab />
         ) : tab === 'audit' ? (
           <AuditTab />
+        ) : tab === 'settings' ? (
+          <SettingsTab />
         ) : !trip ? (
           <Card className="p-8 text-center">
             <p className="text-lg font-extrabold">لا توجد رحلات بعد</p>

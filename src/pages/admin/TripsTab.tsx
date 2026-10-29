@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { compressImage } from '../../lib/image';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import {
@@ -15,7 +16,7 @@ import type { PickupPoint, Trip, TripInput, TripStatus } from '../../lib/types';
 import { isValidEgyptianPhone, normalizePhone, toLatinDigits } from '../../lib/validation';
 import { safeGoogleEmbed, safeHttps } from '../../components/TripInfo';
 import { TripStatusBadge } from '../../components/Layout';
-import { Button, Card, EmptyState, Field, Input, Modal, Select, Textarea, cx, useToast } from '../../components/ui';
+import { Button, Card, EmptyState, Field, Input, Modal, Select, Spinner, Textarea, cx, useToast } from '../../components/ui';
 
 const DEFAULT_DEST = 'مسجد سيدي إبراهيم الدسوقي – دسوق، كفر الشيخ';
 
@@ -102,6 +103,7 @@ export function TripsTab({ trips, onChanged }: { trips: Trip[]; onChanged: () =>
   const [editor, setEditor] = useState<{ id: string | null; draft: Draft } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
+  const [busTrip, setBusTrip] = useState<Trip | null>(null);
 
   useEffect(() => {
     api.listPickupPoints().then(setAllPoints).catch((e) => toast(errorMessage(e), 'error'));
@@ -179,6 +181,12 @@ export function TripsTab({ trips, onChanged }: { trips: Trip[]; onChanged: () =>
                       )}
                     </div>
                     <p className="mt-0.5 font-bold">{t.title}</p>
+                    {(t.bus_number || t.bus_photo_at) && (
+                      <p className="mt-0.5 text-[15px] text-muted">
+                        الأتوبيس: {t.bus_number || '—'}
+                        {t.bus_photo_at && ' · معه صورة'}
+                      </p>
+                    )}
                     <p className="mt-1 text-[15px] text-muted">
                       التحرك {formatTime(t.departure_time)} من {t.departure_point} — {formatMoney(t.seat_price)} للمقعد — الحجز من {formatDateTime(t.booking_opens_at)} حتى{' '}
                       {formatDateTime(t.booking_closes_at)}
@@ -192,6 +200,9 @@ export function TripsTab({ trips, onChanged }: { trips: Trip[]; onChanged: () =>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button variant="secondary" className="min-h-9 text-sm" onClick={() => void openEdit(t)}>
                     تعديل
+                  </Button>
+                  <Button variant="ghost" className="min-h-9 text-sm" onClick={() => setBusTrip(t)}>
+                    صورة الأتوبيس ورقمه
                   </Button>
                   <Button variant="ghost" className="min-h-9 text-sm" loading={busyId === t.id} onClick={() => void toggleHidden(t)}>
                     {t.is_hidden ? 'إظهار للحاجزين' : 'إخفاء عن الحاجزين'}
@@ -240,6 +251,18 @@ export function TripsTab({ trips, onChanged }: { trips: Trip[]; onChanged: () =>
             );
           })}
         </div>
+      )}
+
+      {busTrip && (
+        <BusEditor
+          trip={busTrip}
+          onClose={() => setBusTrip(null)}
+          onSaved={() => {
+            toast('تم حفظ بيانات الأتوبيس.', 'success');
+            setBusTrip(null);
+            onChanged();
+          }}
+        />
       )}
 
       {editor && (
@@ -426,6 +449,124 @@ function TripEditor({
           </Button>
           <Button type="button" variant="secondary" onClick={onClose}>
             تراجع
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/** صورة الأتوبيس ورقم لوحته لرحلة واحدة */
+function BusEditor({ trip, onClose, onSaved }: { trip: Trip; onClose: () => void; onSaved: () => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [number, setNumber] = useState(trip.bus_number ?? '');
+  const [current, setCurrent] = useState<string | null>(null);
+  const [loadingCurrent, setLoadingCurrent] = useState(!!trip.bus_photo_at);
+  const [newPhoto, setNewPhoto] = useState<string | null>(null);
+  const [removed, setRemoved] = useState(false);
+  const [busy, setBusy] = useState<'photo' | 'save' | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!trip.bus_photo_at) return;
+    let alive = true;
+    api
+      .getTripBusPhoto(trip.id)
+      .then((p) => alive && setCurrent(p))
+      .catch(() => {})
+      .finally(() => alive && setLoadingCurrent(false));
+    return () => {
+      alive = false;
+    };
+  }, [trip.id, trip.bus_photo_at]);
+
+  async function pick(file: File | undefined) {
+    if (!file) return;
+    setErr(null);
+    setBusy('photo');
+    try {
+      setNewPhoto(await compressImage(file, { maxSide: 1000, maxChars: 420_000 }));
+      setRemoved(false);
+    } catch (x) {
+      setErr(errorMessage(x));
+    } finally {
+      setBusy(null);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    if (number.trim().length > 40) return setErr('رقم الأتوبيس طويل جدًا (40 حرفًا كحد أقصى).');
+    setBusy('save');
+    try {
+      await api.setTripBus(trip.id, number.trim(), newPhoto, removed && !newPhoto);
+      onSaved();
+    } catch (x) {
+      setErr(errorMessage(x));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const shown = newPhoto ?? (removed ? null : current);
+  return (
+    <Modal open onClose={onClose} title={`الأتوبيس — ${formatTripDate(trip.trip_date)}`}>
+      <form onSubmit={save} className="flex flex-col gap-4">
+        <Field label="رقم لوحة الأتوبيس" htmlFor="bus-number" optional hint="مثال: صهج ٩٢٧ — يظهر تحت الصورة: «أتوبيس الرحلة صهج ٩٢٧».">
+          <Input id="bus-number" value={number} maxLength={40} onChange={(e) => setNumber(e.target.value)} />
+        </Field>
+        <div>
+          <p className="mb-1.5 text-[15px] font-bold">صورة الأتوبيس</p>
+          <div className="flex min-h-40 items-center justify-center overflow-hidden rounded-xl border border-line bg-paper">
+            {busy === 'photo' || (loadingCurrent && !newPhoto && !removed) ? (
+              <Spinner />
+            ) : shown ? (
+              <img src={shown} alt="صورة الأتوبيس" className="max-h-72 w-auto object-contain" />
+            ) : (
+              <p className="p-6 text-center text-muted">لا توجد صورة لهذه الرحلة.</p>
+            )}
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            aria-label="اختر صورة الأتوبيس"
+            onChange={(e) => void pick(e.target.files?.[0])}
+          />
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button type="button" variant="secondary" className="min-h-9 text-sm" onClick={() => fileRef.current?.click()}>
+              {shown ? 'تغيير الصورة' : 'اختر صورة'}
+            </Button>
+            {shown && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="min-h-9 text-sm text-red-700 hover:bg-red-50"
+                onClick={() => {
+                  setNewPhoto(null);
+                  setRemoved(true);
+                }}
+              >
+                حذف الصورة
+              </Button>
+            )}
+          </div>
+          <p className="mt-1.5 text-sm text-muted">تُصغَّر الصورة تلقائيًا قبل الحفظ لتفتح بسرعة على الموبايل.</p>
+        </div>
+        {err && (
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">
+            {err}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <Button type="submit" loading={busy === 'save'} disabled={busy === 'photo'} className="flex-1">
+            حفظ
+          </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            إلغاء
           </Button>
         </div>
       </form>

@@ -423,6 +423,37 @@ select t.ok(exists (select 1 from public.trips where id = (select id from hid)),
 reset role;
 
 -- =====================================================================
+-- 13و) اسم التطبيق وصورة الأتوبيس لكل رحلة
+-- =====================================================================
+select t.as_anon();
+select t.ok((select app_name from public.app_settings) = 'باص الشروق والعبور', 'الزائر يقرأ اسم التطبيق');
+select t.expect_error($q$select public.admin_set_app_name('اسم جديد')$q$, 'permission denied', 'الزائر لا يغيّر اسم التطبيق');
+select t.expect_error($q$update public.app_settings set app_name = 'x'$q$, 'permission denied', 'الزائر لا يعدّل الإعدادات مباشرة');
+select t.as_user('bbbbbbbb-0000-0000-0000-000000000002');
+select t.expect_error($q$select public.admin_set_app_name('اسم جديد')$q$, 'FORBIDDEN', 'غير المسؤول لا يغيّر اسم التطبيق');
+select t.expect_error($q$select public.admin_set_trip_bus((select id from rt), '123', null, false)$q$, 'FORBIDDEN', 'غير المسؤول لا يغيّر بيانات الأتوبيس');
+select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
+select t.ok(public.admin_set_app_name('  باص   الشروق والعبور  ') = 'باص الشروق والعبور', 'المسؤول يغيّر اسم التطبيق (مع تنظيف المسافات)');
+select t.expect_error($q$select public.admin_set_app_name('x')$q$, 'INVALID_APP_NAME', 'اسم قصير جدًا مرفوض');
+select public.admin_set_trip_bus((select id from rt), 'صهج ٩٢٧', 'data:image/jpeg;base64,/9j/4AAQ', false);
+select t.ok((select bus_number = 'صهج ٩٢٧' and bus_photo_at is not null from public.trips where id = (select id from rt)), 'رقم الأتوبيس ووقت الصورة محفوظان');
+select t.expect_error($q$select public.admin_set_trip_bus((select id from rt), '1', 'data:text/html;base64,AAAA', false)$q$, 'INVALID_PHOTO', 'ملف ليس صورة مرفوض');
+select t.expect_error($q$select public.admin_set_trip_bus((select id from rt), '1', 'data:image/jpeg;base64,' || repeat('A', 460000), false)$q$, 'PHOTO_TOO_LARGE', 'صورة كبيرة جدًا مرفوضة');
+select t.as_anon();
+select t.ok((select count(*) from public.trip_bus_photos where trip_id = (select id from rt)) = 1, 'الزائر يرى صورة أتوبيس رحلة ظاهرة');
+select t.expect_error($q$delete from public.trip_bus_photos$q$, 'permission denied', 'الزائر لا يحذف الصور');
+select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
+select public.admin_set_trip_hidden((select id from rt), true);
+select t.as_anon();
+select t.ok((select count(*) from public.trip_bus_photos where trip_id = (select id from rt)) = 0, 'صورة الرحلة المخفية لا تظهر للزائر');
+select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
+select public.admin_set_trip_hidden((select id from rt), false);
+select public.admin_set_trip_bus((select id from rt), '', null, true);
+select t.ok((select bus_number is null and bus_photo_at is null from public.trips where id = (select id from rt))
+  and not exists (select 1 from public.trip_bus_photos where trip_id = (select id from rt)), 'حذف الصورة والرقم');
+reset role;
+
+-- =====================================================================
 -- 14) الثبات النهائي: المقاعد المخزنة = مجموع الحجوزات المؤكدة لكل رحلة
 -- =====================================================================
 reset role;

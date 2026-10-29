@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '../lib/api';
 import { resetDemoData } from '../lib/api/demo';
 import { bookingWindow, formatDateTime, formatTime, formatTripDate } from '../lib/format';
 import type { Trip } from '../lib/types';
 import { Badge } from './ui';
+import { useAppName } from '../lib/appSettings';
 
 export function DemoBanner() {
   if (api.mode !== 'demo') return null;
@@ -23,18 +24,52 @@ export function DemoBanner() {
   );
 }
 
-export function SiteHeader({ children, compact }: { children?: ReactNode; compact?: boolean }) {
+export function SiteHeader({ children, compact, top }: { children?: ReactNode; compact?: boolean; top?: ReactNode }) {
+  const appName = useAppName();
   return (
     <header className="pattern-stars text-white">
       <div className={compact ? 'mx-auto max-w-6xl px-4 py-5' : 'mx-auto max-w-6xl px-4 pt-8 pb-14 sm:pt-12 sm:pb-16'}>
+        {top}
         <a href="#/" className="inline-block">
           <h1 className={compact ? 'text-xl font-extrabold' : 'text-[30px] leading-tight font-extrabold sm:text-5xl'}>
-            باص الشروق والعبور <span aria-hidden="true">🚌</span>
+            {appName} <span aria-hidden="true">🚌</span>
           </h1>
         </a>
         {children}
       </div>
     </header>
+  );
+}
+
+/** صورة أتوبيس الرحلة ورقمه أعلى الصفحة العامة (لكل رحلة على حدة) */
+export function TripBus({ trip }: { trip: Trip }) {
+  const [photo, setPhoto] = useState<string | null>(null);
+  const stamp = trip.bus_photo_at ?? null;
+  useEffect(() => {
+    let alive = true;
+    setPhoto(null);
+    if (stamp) {
+      api
+        .getTripBusPhoto(trip.id)
+        .then((p) => alive && setPhoto(p))
+        .catch(() => {});
+    }
+    return () => {
+      alive = false;
+    };
+  }, [trip.id, stamp]);
+
+  const number = trip.bus_number?.trim();
+  if (!stamp && !number) return null;
+  return (
+    <figure className="mx-auto mb-6 w-full max-w-[300px] sm:mb-8 sm:max-w-[340px]" data-testid="trip-bus">
+      {stamp && (
+        <div className="aspect-[4/5] w-full overflow-hidden rounded-2xl border border-white/20 bg-white/10 shadow-lg">
+          {photo && <img src={photo} alt={number ? `أتوبيس الرحلة ${number}` : 'أتوبيس الرحلة'} className="h-full w-full object-cover" />}
+        </div>
+      )}
+      {number && <figcaption className="mt-2.5 text-center text-lg font-extrabold">أتوبيس الرحلة {number}</figcaption>}
+    </figure>
   );
 }
 

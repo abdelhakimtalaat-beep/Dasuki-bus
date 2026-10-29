@@ -1,6 +1,6 @@
 import type { Api } from './types';
 import { ApiError } from '../errors';
-import { cairoLocalInputToIso } from '../format';
+import { addDays, cairoLocalInputToIso, todayInCairo } from '../format';
 import { EGYPT_MOBILE_RE, cleanName, normalizePhone, newRequestId } from '../validation';
 import { normalizeArabic } from '../text';
 import type {
@@ -29,9 +29,11 @@ interface Db {
   bookings: DbBooking[];
   audit: AuditEntry[];
   session: AdminSession | null;
+  settings?: { app_name: string };
+  busPhotos?: Record<string, string>;
 }
 
-const KEY = 'dasuki-bus-demo-v6';
+const KEY = 'dasuki-bus-demo-v7';
 export const DEMO_CREDENTIALS = { email: 'admin@demo.local', password: 'demo1234' };
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -45,6 +47,8 @@ function code(): string {
 export const DEMO_INSTAPAY = '01065553930';
 
 function seed(): Db {
+  // المعاينة فقط: رحلة بعد أسبوع من اليوم حتى يظهر نموذج الحجز دائمًا
+  const demoDate = addDays(todayInCairo(), 7);
   const now = Date.now();
   const iso = (offsetHours: number) => new Date(now + offsetHours * 3600_000).toISOString();
   const points: PickupPoint[] = [
@@ -57,7 +61,7 @@ function seed(): Db {
     {
       id: 't-1028',
       title: 'رحلة سيدي إبراهيم الدسوقي',
-      trip_date: '2026-10-28',
+      trip_date: demoDate,
       departure_time: '07:30',
       departure_point: 'الشروق',
       destination: 'مسجد سيدي إبراهيم الدسوقي – دسوق، كفر الشيخ',
@@ -67,7 +71,7 @@ function seed(): Db {
       instapay_number: DEMO_INSTAPAY,
       booked_seats: 0,
       booking_opens_at: iso(-48),
-      booking_closes_at: cairoLocalInputToIso('2026-10-25T23:59'),
+      booking_closes_at: cairoLocalInputToIso(`${addDays(demoDate, -1)}T23:59`),
       status: 'open',
       notes: null,
       announcements:
@@ -431,6 +435,18 @@ export function createDemoApi(): Api {
       save();
     },
 
+    async getAppSettings() {
+      await delay();
+      return { app_name: db.settings?.app_name ?? 'باص الشروق والعبور' };
+    },
+
+    async getTripBusPhoto(tripId) {
+      await delay();
+      const t = trip(tripId);
+      if (t.is_hidden && !db.session?.isAdmin) return null;
+      return db.busPhotos?.[tripId] ?? null;
+    },
+
     subscribeTrip(_tripId, onChange) {
       listeners.add(onChange);
       return () => listeners.delete(onChange);
@@ -526,6 +542,38 @@ export function createDemoApi(): Api {
       const old = { ...t };
       t.status = status;
       recompute(db, id);
+      audit('update', 'trips', id, old, t);
+      save();
+    },
+
+    async setAppName(name) {
+      await delay();
+      requireAdmin();
+      const v = name.replace(/\s+/g, ' ').trim();
+      if (v.length < 2 || v.length > 80) throw new ApiError('INVALID_APP_NAME');
+      db.settings = { app_name: v };
+      save();
+      return v;
+    },
+
+    async setTripBus(id, busNumber, photo, removePhoto) {
+      await delay();
+      requireAdmin();
+      const t = trip(id);
+      const num = busNumber.trim() || null;
+      if (num && num.length > 40) throw new ApiError('INVALID_BUS_NUMBER');
+      const old = { ...t };
+      db.busPhotos ??= {};
+      if (photo) {
+        if (photo.length > 450_000) throw new ApiError('PHOTO_TOO_LARGE');
+        if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(photo)) throw new ApiError('INVALID_PHOTO');
+        db.busPhotos[id] = photo;
+        t.bus_photo_at = new Date().toISOString();
+      } else if (removePhoto) {
+        delete db.busPhotos[id];
+        t.bus_photo_at = null;
+      }
+      t.bus_number = num;
       audit('update', 'trips', id, old, t);
       save();
     },

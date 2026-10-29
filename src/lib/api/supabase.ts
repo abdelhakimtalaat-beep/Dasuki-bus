@@ -110,6 +110,20 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       await run(sb.rpc('cancel_my_booking', { p_trip_id: tripId, p_full_name: fullName, p_phone: phone }));
     },
 
+    async getAppSettings() {
+      const row = (await run(sb.from('app_settings').select('app_name').eq('id', 1).maybeSingle())) as {
+        app_name: string;
+      } | null;
+      return { app_name: row?.app_name ?? '' };
+    },
+
+    async getTripBusPhoto(tripId) {
+      const row = (await run(
+        sb.from('trip_bus_photos').select('image').eq('trip_id', tripId).maybeSingle(),
+      )) as { image: string } | null;
+      return row?.image ?? null;
+    },
+
     subscribeTrip(tripId, onChange) {
       // الزائر يشترك في صف الرحلة (booked_seats يتغير مع كل حجز/إلغاء).
       // المسؤول يستقبل أيضًا تغييرات جدول الحجوزات (RLS يمنعها عن الزوار).
@@ -187,6 +201,16 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
 
     async setTripHidden(id, hidden) {
       await run(sb.rpc('admin_set_trip_hidden', { p_id: id, p_hidden: hidden }));
+    },
+
+    async setAppName(name) {
+      return (await run(sb.rpc('admin_set_app_name', { p_name: name }))) as string;
+    },
+
+    async setTripBus(id, busNumber, photo, removePhoto) {
+      await run(
+        sb.rpc('admin_set_trip_bus', { p_id: id, p_bus_number: busNumber, p_photo: photo, p_remove_photo: removePhoto }),
+      );
     },
 
     async listBookings(tripId) {

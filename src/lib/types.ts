@@ -23,6 +23,10 @@ export interface Trip {
   route_embed_url: string | null;
   /** مخفية عن الحاجزين (يراها المسؤول فقط) */
   is_hidden?: boolean;
+  /** رقم لوحة الأتوبيس لهذه الرحلة */
+  bus_number?: string | null;
+  /** وقت رفع صورة الأتوبيس (null = لا توجد صورة) */
+  bus_photo_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -188,4 +192,8 @@ export interface AuditEntry {
 export interface AdminSession {
   email: string;
   isAdmin: boolean;
+}
+
+export interface AppSettings {
+  app_name: string;
 }

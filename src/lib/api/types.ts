@@ -1,4 +1,5 @@
 import type {
+  AppSettings,
   AdminSession,
   AuditEntry,
   Booking,
@@ -33,6 +34,10 @@ export interface Api {
   cancelMyBooking(tripId: string, fullName: string, phone: string): Promise<void>;
   /** يستدعي onChange عند أي تغيير في الرحلة/حجوزاتها. يرجع دالة لإلغاء الاشتراك. */
   subscribeTrip(tripId: string, onChange: () => void): () => void;
+  /** اسم التطبيق وإعداداته العامة */
+  getAppSettings(): Promise<AppSettings>;
+  /** صورة أتوبيس الرحلة (data URL) أو null */
+  getTripBusPhoto(tripId: string): Promise<string | null>;
 
   // ---- المصادقة ----
   getSession(): Promise<AdminSession | null>;
@@ -47,6 +52,9 @@ export interface Api {
   setTripStatus(id: string, status: TripStatus): Promise<void>;
   /** إخفاء الرحلة عن الحاجزين أو إظهارها */
   setTripHidden(id: string, hidden: boolean): Promise<void>;
+  setAppName(name: string): Promise<string>;
+  /** رقم الأتوبيس + صورة جديدة (أو حذف الصورة) لرحلة */
+  setTripBus(id: string, busNumber: string, photo: string | null, removePhoto: boolean): Promise<void>;
   listBookings(tripId: string): Promise<Booking[]>;
   updateBooking(id: string, patch: BookingPatch): Promise<void>;
   listAudit(limit: number): Promise<AuditEntry[]>;
